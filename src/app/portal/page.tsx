@@ -169,10 +169,10 @@ function PortalContent() {
     setError("");
     setLoading(true);
 
-    const conquestData = selectedConquests.map((i) => ({
-      title: DEFAULT_CONQUESTS[i].title,
-      description: DEFAULT_CONQUESTS[i].description,
-      xpReward: DEFAULT_CONQUESTS[i].xpReward,
+    const conquestData: { title: string; description: string; xpReward: number; isCustom: boolean }[] = selectedConquests.map((i) => ({
+      title: DEFAULT_CONQUESTS[i].title as string,
+      description: DEFAULT_CONQUESTS[i].description as string,
+      xpReward: DEFAULT_CONQUESTS[i].xpReward as number,
       isCustom: false,
     }));
 
