@@ -1,0 +1,95 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [vikingName, setVikingName] = useState("");
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vikingName, pin }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Login failed");
+        return;
+      }
+
+      router.push("/dashboard");
+    } catch {
+      setError("Connection failed. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-dvh flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-[family-name:var(--font-cinzel)] font-bold text-fire tracking-wider">
+            Iron Viking
+          </h1>
+          <p className="text-muted mt-2 text-sm">Enter your name and rune-code</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm text-muted mb-1">Viking Name</label>
+            <input
+              type="text"
+              value={vikingName}
+              onChange={(e) => setVikingName(e.target.value)}
+              className="w-full bg-card border border-card-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:border-fire/50 font-[family-name:var(--font-cinzel)]"
+              placeholder="Speak your name"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-muted mb-1">Rune-Code</label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              className="w-full bg-card border border-card-border rounded-lg px-4 py-3 text-foreground text-center text-2xl tracking-[0.5em] focus:outline-none focus:border-fire/50"
+              placeholder="····"
+              required
+            />
+          </div>
+
+          {error && (
+            <div className="text-red-400 text-sm text-center">{error}</div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !vikingName || pin.length !== 4}
+            className="w-full bg-fire text-background font-[family-name:var(--font-cinzel)] font-bold py-3 rounded-lg hover:bg-fire/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? "Entering..." : "Enter Valhalla"}
+          </button>
+        </form>
+
+        <p className="text-center text-xs text-muted mt-6">
+          No account? Ask your chieftain for a summoning rune.
+        </p>
+      </div>
+    </div>
+  );
+}

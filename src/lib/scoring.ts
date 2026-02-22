@@ -1,0 +1,500 @@
+import { db } from "@/db";
+import {
+  submissions,
+  weeklyScores,
+  weeks,
+  players,
+  hypeVotes,
+  prTrials,
+  challenges,
+  milestones,
+} from "@/db/schema";
+import { eq, and, sql, desc } from "drizzle-orm";
+import {
+  RANK_BONUSES,
+  COMPETITIVE_BONUSES,
+  COLLABORATIVE_BONUS,
+  SHIELD_BONUS,
+  PR_BONUS,
+  ONTIME_BONUS,
+  SKALD_BONUS,
+  STREAK_BONUS_PER_WEEK,
+  STREAK_BONUS_CAP,
+  BERSERKER_MULTIPLIER,
+  KM_POINTS_POOL,
+  DIFFICULTY_POINTS,
+  type Difficulty,
+  getTitleForXP,
+} from "./constants";
+
+export async function scoreWeek(weekId: number): Promise<{ success: boolean; message: string }> {
+  const [week] = await db.select().from(weeks).where(eq(weeks.id, weekId)).limit(1);
+  if (!week) return { success: false, message: "Week not found" };
+  if (week.isLocked) return { success: false, message: "Week already locked" };
+
+  const allPlayers = await db.select().from(players).where(eq(players.onboardingComplete, true));
+  const weekSubs = await db.select().from(submissions).where(eq(submissions.weekId, weekId));
+
+  // Clear any previous scores for this week (re-run support)
+  await db.delete(weeklyScores).where(eq(weeklyScores.weekId, weekId));
+
+  // STEP 1: Validate submissions
+  const subsByPlayer: Record<number, typeof weekSubs[0]> = {};
+  for (const sub of weekSubs) {
+    subsByPlayer[sub.playerId] = sub;
+  }
+
+  // STEP 2: Proportional km points
+  const totalGroupKm = weekSubs.reduce((sum, s) => sum + s.kmRun, 0);
+  const kmPointsMap: Record<number, number> = {};
+  for (const p of allPlayers) {
+    const sub = subsByPlayer[p.id];
+    if (!sub || totalGroupKm === 0) {
+      kmPointsMap[p.id] = 0;
+    } else {
+      kmPointsMap[p.id] = Math.min(KM_POINTS_POOL, (sub.kmRun / totalGroupKm) * KM_POINTS_POOL);
+    }
+  }
+
+  // STEP 3: Weekly realm ranks (by km, tiebreak by runs then gym)
+  const ranked = allPlayers
+    .map((p) => {
+      const sub = subsByPlayer[p.id];
+      return {
+        playerId: p.id,
+        km: sub?.kmRun || 0,
+        runs: sub?.runsCount || 0,
+        gym: sub?.gymSessions || 0,
+      };
+    })
+    .sort((a, b) => {
+      if (b.km !== a.km) return b.km - a.km;
+      if (b.runs !== a.runs) return b.runs - a.runs;
+      return b.gym - a.gym;
+    });
+
+  const rankMap: Record<number, number> = {};
+  ranked.forEach((r, i) => {
+    rankMap[r.playerId] = i + 1;
+  });
+
+  // STEP 4: Rank bonus
+  const rankBonusMap: Record<number, number> = {};
+  for (const p of allPlayers) {
+    const rank = rankMap[p.id] || 6;
+    rankBonusMap[p.id] = RANK_BONUSES[Math.min(rank - 1, 5)];
+  }
+
+  // STEP 5: Challenge points
+  let soloChallenge = null;
+  let secondChallenge = null;
+  if (week.soloChallengeId) {
+    const [c] = await db.select().from(challenges).where(eq(challenges.id, week.soloChallengeId)).limit(1);
+    soloChallenge = c;
+  }
+  if (week.secondChallengeId) {
+    const [c] = await db.select().from(challenges).where(eq(challenges.id, week.secondChallengeId)).limit(1);
+    secondChallenge = c;
+  }
+
+  const soloPtsMap: Record<number, number> = {};
+  const secondPtsMap: Record<number, number> = {};
+
+  const soloDiff = ((soloChallenge?.difficulty || "normal") as Difficulty);
+  const secondDiff = ((secondChallenge?.difficulty || "normal") as Difficulty);
+
+  for (const p of allPlayers) {
+    const sub = subsByPlayer[p.id];
+    soloPtsMap[p.id] = sub?.soloChallengeDone ? DIFFICULTY_POINTS[soloDiff].solo : 0;
+    secondPtsMap[p.id] = 0;
+  }
+
+  if (secondChallenge && week.type === "competition") {
+    const competitiveResults = allPlayers
+      .map((p) => {
+        const sub = subsByPlayer[p.id];
+        const attempted = sub?.secondChallengeAttempted !== false;
+        return {
+          playerId: p.id,
+          result: attempted && sub?.secondChallengeResult != null ? sub.secondChallengeResult : null,
+          attempted,
+        };
+      })
+      .sort((a, b) => {
+        if (a.result === null && b.result === null) return 0;
+        if (a.result === null) return 1;
+        if (b.result === null) return -1;
+        // For time-based challenges, lower is better
+        if (secondChallenge!.dataType === "time_mmss") return a.result - b.result;
+        return b.result - a.result;
+      });
+
+    competitiveResults.forEach((r, i) => {
+      if (r.result !== null) {
+        secondPtsMap[r.playerId] = COMPETITIVE_BONUSES[Math.min(i, 5)];
+      }
+    });
+  }
+
+  if (secondChallenge && week.type === "collaboration") {
+    let groupMet = false;
+
+    if (secondChallenge.dataType === "boolean") {
+      const allContributed = allPlayers.every((p) => {
+        const sub = subsByPlayer[p.id];
+        return sub && sub.secondChallengeAttempted;
+      });
+      groupMet = allContributed;
+    } else if (secondChallenge.dataType === "distance_km" && secondChallenge.targetValue) {
+      groupMet = totalGroupKm >= secondChallenge.targetValue;
+    } else if (secondChallenge.targetValue) {
+      const total = weekSubs.reduce((sum, s) => sum + (s.secondChallengeResult || 0), 0);
+      groupMet = total >= secondChallenge.targetValue;
+    }
+
+    if (groupMet) {
+      for (const p of allPlayers) {
+        if (subsByPlayer[p.id]) {
+          secondPtsMap[p.id] = DIFFICULTY_POINTS[secondDiff].group;
+        }
+      }
+    }
+  }
+
+  // STEP 6: Streak bonus — consecutive weekly submissions
+  const streakMap: Record<number, number> = {};
+  for (const p of allPlayers) {
+    const sub = subsByPlayer[p.id];
+    if (!sub) {
+      streakMap[p.id] = 0;
+      continue;
+    }
+
+    let streak = 1;
+    let checkWeekNum = week.weekNumber - 1;
+    while (checkWeekNum >= 1) {
+      const [prevWeek] = await db
+        .select()
+        .from(weeks)
+        .where(eq(weeks.weekNumber, checkWeekNum))
+        .limit(1);
+      if (!prevWeek) break;
+
+      const [prevSub] = await db
+        .select()
+        .from(submissions)
+        .where(and(eq(submissions.playerId, p.id), eq(submissions.weekId, prevWeek.id)))
+        .limit(1);
+
+      if (!prevSub) break;
+      streak++;
+      checkWeekNum--;
+    }
+
+    streakMap[p.id] = Math.min(streak * STREAK_BONUS_PER_WEEK, STREAK_BONUS_CAP);
+  }
+
+  // STEP 7: Shield points
+  const weekVotes = await db.select().from(hypeVotes).where(eq(hypeVotes.weekId, weekId));
+  const shieldMap: Record<number, number> = {};
+  for (const p of allPlayers) {
+    const received = weekVotes.filter((v) => v.receiverId === p.id).length;
+    shieldMap[p.id] = received * SHIELD_BONUS;
+  }
+
+  // STEP 8: PR trial bonus
+  const weekTrials = await db
+    .select()
+    .from(prTrials)
+    .where(and(eq(prTrials.weekId, weekId)));
+  const prMap: Record<number, number> = {};
+  for (const p of allPlayers) {
+    const trial = weekTrials.find((t) => t.playerId === p.id && t.success === true);
+    prMap[p.id] = trial ? PR_BONUS : 0;
+  }
+
+  // STEP 9: On-time bonus
+  const ontimeMap: Record<number, number> = {};
+  for (const p of allPlayers) {
+    const sub = subsByPlayer[p.id];
+    ontimeMap[p.id] = sub && !sub.isLate ? ONTIME_BONUS : 0;
+  }
+
+  // STEP 10: Berserker check
+  const berserkerMap: Record<number, number> = {};
+  for (const p of allPlayers) {
+    berserkerMap[p.id] = 1.0;
+
+    if (week.weekNumber < 3) continue;
+
+    const prevScores = await db
+      .select()
+      .from(weeklyScores)
+      .innerJoin(weeks, eq(weeklyScores.weekId, weeks.id))
+      .where(
+        and(
+          eq(weeklyScores.playerId, p.id),
+          sql`${weeks.weekNumber} >= ${week.weekNumber - 2}`,
+          sql`${weeks.weekNumber} < ${week.weekNumber}`
+        )
+      )
+      .orderBy(desc(weeks.weekNumber))
+      .limit(2);
+
+    if (prevScores.length === 2 && prevScores.every((s) => s.weekly_scores.realmRankWeek === 6)) {
+      berserkerMap[p.id] = BERSERKER_MULTIPLIER;
+    }
+  }
+
+  // STEP 11 & 12: Final score, cumulative XP, title
+  for (const p of allPlayers) {
+    const totalRaw =
+      kmPointsMap[p.id] +
+      rankBonusMap[p.id] +
+      soloPtsMap[p.id] +
+      secondPtsMap[p.id] +
+      streakMap[p.id] +
+      shieldMap[p.id] +
+      prMap[p.id] +
+      ontimeMap[p.id];
+
+    const totalFinal = Math.round(totalRaw * berserkerMap[p.id] * 10) / 10;
+
+    const [prevScore] = await db
+      .select()
+      .from(weeklyScores)
+      .innerJoin(weeks, eq(weeklyScores.weekId, weeks.id))
+      .where(
+        and(
+          eq(weeklyScores.playerId, p.id),
+          sql`${weeks.weekNumber} < ${week.weekNumber}`
+        )
+      )
+      .orderBy(desc(weeks.weekNumber))
+      .limit(1);
+
+    const prevXp = prevScore?.weekly_scores.xpTotalAfter || 0;
+    const newXp = prevXp + totalFinal;
+    const title = getTitleForXP(newXp);
+
+    await db.insert(weeklyScores).values({
+      playerId: p.id,
+      weekId,
+      kmPoints: Math.round(kmPointsMap[p.id] * 10) / 10,
+      rankBonus: rankBonusMap[p.id],
+      soloChallengePoints: soloPtsMap[p.id],
+      secondChallengePoints: secondPtsMap[p.id],
+      streakBonus: streakMap[p.id],
+      shieldPoints: shieldMap[p.id],
+      prBonus: prMap[p.id],
+      ontimeBonus: ontimeMap[p.id],
+      berserkerMultiplier: berserkerMap[p.id],
+      totalRaw: Math.round(totalRaw * 10) / 10,
+      totalFinal,
+      xpTotalAfter: Math.round(newXp * 10) / 10,
+      titleAfter: title.name,
+      realmRankWeek: rankMap[p.id] || 6,
+    });
+  }
+
+  // STEP 13: Detect milestones
+  await detectMilestones(weekId, week.weekNumber, allPlayers, subsByPlayer);
+
+  // STEP 14: Skald check (monthly)
+  await checkSkald(weekId, week);
+
+  // STEP 15: Lock the week
+  await db.update(weeks).set({ isLocked: true }).where(eq(weeks.id, weekId));
+
+  return { success: true, message: `Week ${week.weekNumber} scored and locked.` };
+}
+
+async function detectMilestones(
+  weekId: number,
+  weekNumber: number,
+  allPlayers: { id: number }[],
+  subsByPlayer: Record<number, { kmRun: number; runsCount: number; gymSessions: number }>
+) {
+  const kmMilestones = [
+    { type: "first_20km_week", threshold: 20, label: "week" },
+    { type: "first_30km_week", threshold: 30, label: "week" },
+    { type: "first_40km_week", threshold: 40, label: "week" },
+  ];
+
+  for (const p of allPlayers) {
+    const sub = subsByPlayer[p.id];
+    if (!sub) continue;
+
+    for (const m of kmMilestones) {
+      if (sub.kmRun >= m.threshold) {
+        const existing = await db
+          .select()
+          .from(milestones)
+          .where(and(eq(milestones.playerId, p.id), eq(milestones.type, m.type)))
+          .limit(1);
+        if (existing.length === 0) {
+          await db.insert(milestones).values({
+            playerId: p.id,
+            type: m.type,
+            weekId,
+            value: sub.kmRun,
+            celebrated: false,
+          });
+        }
+      }
+    }
+  }
+
+  // Group milestones
+  const totalGroupKm = Object.values(subsByPlayer).reduce((sum, s) => sum + s.kmRun, 0);
+
+  const groupKmMilestones = [
+    { type: "group_100km_week", threshold: 100 },
+  ];
+
+  for (const m of groupKmMilestones) {
+    if (totalGroupKm >= m.threshold) {
+      const existing = await db
+        .select()
+        .from(milestones)
+        .where(and(eq(milestones.type, m.type), eq(milestones.weekId, weekId)))
+        .limit(1);
+      if (existing.length === 0) {
+        await db.insert(milestones).values({
+          playerId: null,
+          type: m.type,
+          weekId,
+          value: totalGroupKm,
+          celebrated: false,
+        });
+      }
+    }
+  }
+
+  // Check cumulative group km
+  const allSubs = await db.select({ km: submissions.kmRun }).from(submissions);
+  const cumulativeKm = allSubs.reduce((sum, s) => sum + s.km, 0);
+
+  const cumulativeMilestones = [
+    { type: "group_500km_total", threshold: 500 },
+    { type: "group_1000km_total", threshold: 1000 },
+  ];
+
+  for (const m of cumulativeMilestones) {
+    if (cumulativeKm >= m.threshold) {
+      const existing = await db
+        .select()
+        .from(milestones)
+        .where(eq(milestones.type, m.type))
+        .limit(1);
+      if (existing.length === 0) {
+        await db.insert(milestones).values({
+          playerId: null,
+          type: m.type,
+          weekId,
+          value: cumulativeKm,
+          celebrated: false,
+        });
+      }
+    }
+  }
+
+  // All Vikings hit 10km in the same week
+  const allHit10 = allPlayers.every((p) => {
+    const sub = subsByPlayer[p.id];
+    return sub && sub.kmRun >= 10;
+  });
+  if (allHit10) {
+    const existing = await db
+      .select()
+      .from(milestones)
+      .where(and(eq(milestones.type, "all_vikings_10km_week"), eq(milestones.weekId, weekId)))
+      .limit(1);
+    if (existing.length === 0) {
+      await db.insert(milestones).values({
+        playerId: null,
+        type: "all_vikings_10km_week",
+        weekId,
+        value: null,
+        celebrated: false,
+      });
+    }
+  }
+}
+
+async function checkSkald(weekId: number, week: typeof weeks.$inferSelect) {
+  const endDate = new Date(week.endDate);
+  const endMonth = endDate.getMonth();
+  const endYear = endDate.getFullYear();
+
+  // Check if this is the last week ending in this calendar month
+  const [nextWeek] = await db
+    .select()
+    .from(weeks)
+    .where(eq(weeks.weekNumber, week.weekNumber + 1))
+    .limit(1);
+
+  if (nextWeek) {
+    const nextEnd = new Date(nextWeek.endDate);
+    if (nextEnd.getMonth() === endMonth && nextEnd.getFullYear() === endYear) {
+      return; // Not the last week of the month
+    }
+  }
+
+  // Get all weeks in this month
+  const monthWeeks = await db
+    .select()
+    .from(weeks)
+    .where(
+      sql`extract(month from ${weeks.endDate}::date) = ${endMonth + 1}
+          AND extract(year from ${weeks.endDate}::date) = ${endYear}`
+    );
+
+  const monthWeekIds = monthWeeks.map((w) => w.id);
+  if (monthWeekIds.length === 0) return;
+
+  const votes = await db
+    .select()
+    .from(hypeVotes)
+    .where(sql`${hypeVotes.weekId} = ANY(${monthWeekIds})`);
+
+  const voteCountsByGiver: Record<number, number> = {};
+  votes.forEach((v) => {
+    voteCountsByGiver[v.giverId] = (voteCountsByGiver[v.giverId] || 0) + 1;
+  });
+
+  let maxVotes = 0;
+  let skaldPlayerId: number | null = null;
+  for (const [pid, count] of Object.entries(voteCountsByGiver)) {
+    if (count > maxVotes) {
+      maxVotes = count;
+      skaldPlayerId = Number(pid);
+    }
+  }
+
+  if (skaldPlayerId) {
+    const [existingScore] = await db
+      .select()
+      .from(weeklyScores)
+      .where(and(eq(weeklyScores.playerId, skaldPlayerId), eq(weeklyScores.weekId, weekId)))
+      .limit(1);
+
+    if (existingScore) {
+      await db
+        .update(weeklyScores)
+        .set({
+          totalFinal: existingScore.totalFinal + SKALD_BONUS,
+          xpTotalAfter: existingScore.xpTotalAfter + SKALD_BONUS,
+        })
+        .where(eq(weeklyScores.id, existingScore.id));
+    }
+
+    await db.insert(milestones).values({
+      playerId: skaldPlayerId,
+      type: "skald_monthly",
+      weekId,
+      value: maxVotes,
+      celebrated: false,
+    });
+  }
+}

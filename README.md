@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Iron Viking
 
-## Getting Started
+A Norse-themed leaderboard app for 6 friends training together for a 42K Iron Viking obstacle course race. 28 weeks of gamified competition, RPG-style progression, and Viking glory.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Next.js 15** (App Router) — frontend + API
+- **Drizzle ORM** — type-safe database queries
+- **Neon** — serverless PostgreSQL
+- **Vercel** — hosting
+- **Tailwind CSS v4** — styling with custom Norse theme
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Clone the repo
+2. `npm install`
+3. Copy `.env.local.example` to `.env.local` and fill in:
+   - `DATABASE_URL` — your Neon connection string
+   - `JWT_SECRET` — any long random string
+4. Push the schema to your database:
+   ```bash
+   npx drizzle-kit push
+   ```
+5. Seed the database with weeks and default challenges:
+   ```bash
+   npx tsx src/db/seed.ts
+   ```
+6. Run the dev server:
+   ```bash
+   npm run dev
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deployment
 
-## Learn More
+1. Push to GitHub
+2. Import into Vercel
+3. Connect Neon via the Vercel integration
+4. Add `JWT_SECRET` environment variable
+5. Run `npx drizzle-kit push` against production DB
+6. Run seed script against production DB
+7. Deploy
 
-To learn more about Next.js, take a look at the following resources:
+## First-time admin setup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Go to `/login` and create the first account via an invite link
+2. Player slot 1 is automatically admin
+3. From the admin panel, generate invite links for the remaining 5 players
+4. Set active challenges for Week 1
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Key routes
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `/dashboard` — main leaderboard + countdown
+- `/submit` — weekly input form
+- `/profile/[id]` — player profile
+- `/challenges` — challenge board
+- `/guide` — training plan
+- `/admin` — admin panel
+- `/portal?rune=XXXXX` — onboarding via invite link
+- `/login` — login page

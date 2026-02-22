@@ -1,26 +1,104 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0d0c0b;
+  --foreground: #e8e0d4;
+  --fire: #e8782a;
+  --ice: #7ab8d4;
+  --gold: #c8a22a;
+  --silver: #a8a8a8;
+  --bronze: #b87333;
+  --stone: #6b6b6b;
+  --purple: #5a3e6b;
+  --card: #1a1816;
+  --card-border: #2a2520;
+  --muted: #8a8070;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-fire: var(--fire);
+  --color-ice: var(--ice);
+  --color-gold: var(--gold);
+  --color-silver: var(--silver);
+  --color-bronze: var(--bronze);
+  --color-stone: var(--stone);
+  --color-purple: var(--purple);
+  --color-card: var(--card);
+  --color-card-border: var(--card-border);
+  --color-muted: var(--muted);
+  --font-heading: var(--font-cinzel);
+  --font-body: var(--font-crimson);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-crimson), Georgia, serif;
+  min-height: 100dvh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-cinzel), 'Times New Roman', serif;
+}
+
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+@keyframes fire-pulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(232, 120, 42, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(232, 120, 42, 0.5); }
+}
+
+@keyframes ice-shimmer {
+  0%, 100% { box-shadow: 0 0 12px rgba(122, 184, 212, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(122, 184, 212, 0.4); }
+}
+
+.asgard-glow {
+  animation: fire-pulse 3s ease-in-out infinite;
+}
+
+.vanaheim-glow {
+  animation: silver-shimmer 3s ease-in-out infinite;
+}
+
+.midgard-glow {
+  animation: bronze-pulse 3s ease-in-out infinite;
+}
+
+.niflheim-glow {
+  animation: ice-shimmer 3s ease-in-out infinite;
+}
+
+@keyframes silver-shimmer {
+  0%, 100% { box-shadow: 0 0 10px rgba(168, 168, 168, 0.15); }
+  50% { box-shadow: 0 0 18px rgba(168, 168, 168, 0.3); }
+}
+
+@keyframes bronze-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(184, 115, 51, 0.12); }
+  50% { box-shadow: 0 0 15px rgba(184, 115, 51, 0.25); }
+}
+
+.einherjar-glow {
+  text-shadow: 0 0 8px rgba(200, 162, 42, 0.6);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.rune-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--card-border), var(--fire), var(--card-border), transparent);
 }
