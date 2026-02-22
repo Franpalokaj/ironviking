@@ -35,7 +35,6 @@ function PortalContent() {
 
   // Audio
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioInitialized = useRef(false);
   const fadeRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Forge fields
@@ -58,6 +57,19 @@ function PortalContent() {
 
   // Valhalla reveal
   const [revealStep, setRevealStep] = useState(0);
+
+  // Preload audio as soon as the gate screen appears so the file
+  // is buffered by the time the user taps the rune.
+  useEffect(() => {
+    if (act !== "gate") return;
+    if (audioRef.current) return;
+    const audio = new Audio("/audio/langhus-burning.mp3");
+    audio.loop = true;
+    audio.volume = 0;
+    audio.preload = "auto";
+    audio.load();
+    audioRef.current = audio;
+  }, [act]);
 
   // Cleanup audio on unmount
   useEffect(() => {
@@ -102,20 +114,28 @@ function PortalContent() {
   }, [rune, isPreview]);
 
   function startMusic() {
-    if (audioInitialized.current && audioRef.current) {
-      audioRef.current.play().catch(() => {});
-      return;
+    let audio = audioRef.current;
+    if (!audio) {
+      audio = new Audio("/audio/langhus-burning.mp3");
+      audio.loop = true;
+      audio.volume = 0;
+      audioRef.current = audio;
     }
-    const audio = new Audio("/audio/langhus-burning.mp3");
-    audio.loop = true;
     audio.volume = 0;
-    audioRef.current = audio;
-    audioInitialized.current = true;
-    audio.play().then(() => {
-      fadeRef.current = fadeVolume(audio, 0, 0.4, 2000);
-    }).catch((e) => {
-      console.warn("Audio playback failed:", e);
-    });
+    const p = audio.play();
+    if (p) {
+      p.then(() => {
+        fadeRef.current = fadeVolume(audio!, 0, 0.4, 2000);
+      }).catch(() => {
+        // Some browsers need a second attempt after short delay
+        setTimeout(() => {
+          if (!audio) return;
+          audio.play().then(() => {
+            fadeRef.current = fadeVolume(audio!, 0, 0.4, 2000);
+          }).catch(() => {});
+        }, 200);
+      });
+    }
   }
 
   function swellMusic() {
