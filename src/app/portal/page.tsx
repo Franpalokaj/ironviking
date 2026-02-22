@@ -35,6 +35,7 @@ function PortalContent() {
 
   // Audio
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioInitialized = useRef(false);
   const fadeRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Forge fields
@@ -58,18 +59,15 @@ function PortalContent() {
   // Valhalla reveal
   const [revealStep, setRevealStep] = useState(0);
 
-  // Initialize audio
+  // Cleanup audio on unmount
   useEffect(() => {
-    const audio = new Audio("/audio/langhus-burning.mp3");
-    audio.loop = true;
-    audio.volume = 0;
-    audio.preload = "auto";
-    audioRef.current = audio;
-
     return () => {
       if (fadeRef.current) clearInterval(fadeRef.current);
-      audio.pause();
-      audio.src = "";
+      const audio = audioRef.current;
+      if (audio) {
+        audio.pause();
+        audio.src = "";
+      }
     };
   }, []);
 
@@ -104,11 +102,20 @@ function PortalContent() {
   }, [rune, isPreview]);
 
   function startMusic() {
-    const audio = audioRef.current;
-    if (!audio) return;
+    if (audioInitialized.current && audioRef.current) {
+      audioRef.current.play().catch(() => {});
+      return;
+    }
+    const audio = new Audio("/audio/langhus-burning.mp3");
+    audio.loop = true;
+    audio.volume = 0;
+    audioRef.current = audio;
+    audioInitialized.current = true;
     audio.play().then(() => {
       fadeRef.current = fadeVolume(audio, 0, 0.4, 2000);
-    }).catch(() => {});
+    }).catch((e) => {
+      console.warn("Audio playback failed:", e);
+    });
   }
 
   function swellMusic() {
