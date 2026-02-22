@@ -1,6 +1,23 @@
 export const RACE_DATE = new Date("2026-09-12T00:00:00+02:00");
 export const TRAINING_START = new Date("2026-02-23T00:00:00+01:00");
 export const TIMEZONE = "Europe/Berlin";
+
+/**
+ * Returns the Sunday 23:59:59 deadline in UTC for a given week end date,
+ * correctly handling CET/CEST transitions.
+ */
+export function getWeekDeadline(endDate: string): Date {
+  const midnight = new Date(`${endDate}T23:59:59`);
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: TIMEZONE,
+    timeZoneName: "shortOffset",
+  });
+  const parts = formatter.formatToParts(midnight);
+  const offsetStr = parts.find((p) => p.type === "timeZoneName")?.value || "GMT+1";
+  const match = offsetStr.match(/GMT([+-]\d+)/);
+  const offsetHours = match ? parseInt(match[1], 10) : 1;
+  return new Date(`${endDate}T23:59:59${offsetHours >= 0 ? "+" : ""}${String(offsetHours).padStart(2, "0")}:00`);
+}
 export const TOTAL_WEEKS = 28;
 export const NUM_PLAYERS = 6;
 

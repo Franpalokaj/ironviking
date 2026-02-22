@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { submissions, hypeVotes, weeks } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireSession } from "@/lib/auth";
+import { getWeekDeadline } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date();
-    const weekEnd = new Date(week.endDate + "T23:59:59+01:00");
+    const weekEnd = getWeekDeadline(week.endDate);
     const isLate = now > weekEnd;
 
     const [submission] = await db

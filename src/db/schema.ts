@@ -44,7 +44,7 @@ export const weeks = pgTable("weeks", {
 
 export const challenges = pgTable("challenges", {
   id: serial("id").primaryKey(),
-  title: text("title").notNull(),
+  title: text("title").unique().notNull(),
   description: text("description").notNull(),
   track: text("track").notNull(), // 'solo', 'competitive', 'collaborative'
   dataType: text("data_type"), // 'time_mmss', 'distance_km', 'count', 'weight_kg', 'boolean', null
@@ -99,7 +99,9 @@ export const hypeVotes = pgTable("hype_votes", {
   giverId: integer("giver_id").references(() => players.id).notNull(),
   receiverId: integer("receiver_id").references(() => players.id).notNull(),
   weekId: integer("week_id").references(() => weeks.id).notNull(),
-});
+}, (table) => [
+  unique("unique_vote_giver_week").on(table.giverId, table.weekId),
+]);
 
 export const milestones = pgTable("milestones", {
   id: serial("id").primaryKey(),

@@ -2,7 +2,18 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("JWT_SECRET environment variable is required in production");
+    }
+    return "dev-secret-change-me";
+  }
+  return secret;
+}
+
+const JWT_SECRET = getJwtSecret();
 const COOKIE_NAME = "iron-viking-token";
 const TOKEN_EXPIRY = "7d";
 

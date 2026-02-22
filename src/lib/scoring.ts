@@ -38,6 +38,8 @@ export async function scoreWeek(weekId: number): Promise<{ success: boolean; mes
   // Clear any previous scores for this week (re-run support)
   await db.delete(weeklyScores).where(eq(weeklyScores.weekId, weekId));
 
+  try {
+
   // STEP 1: Validate submissions
   const subsByPlayer: Record<number, typeof weekSubs[0]> = {};
   for (const sub of weekSubs) {
@@ -307,6 +309,13 @@ export async function scoreWeek(weekId: number): Promise<{ success: boolean; mes
   await db.update(weeks).set({ isLocked: true }).where(eq(weeks.id, weekId));
 
   return { success: true, message: `Week ${week.weekNumber} scored and locked.` };
+
+  } catch (err) {
+    // Roll back partial writes so the admin can safely re-run scoring
+    await db.delete(weeklyScores).where(eq(weeklyScores.weekId, weekId)).catch(() => {});
+    const message = err instanceof Error ? err.message : "Unknown scoring error";
+    return { success: false, message: `Scoring failed (rolled back): ${message}` };
+  }
 }
 
 async function detectMilestones(
@@ -458,14 +467,14 @@ async function checkSkald(weekId: number, week: typeof weeks.$inferSelect) {
     .from(hypeVotes)
     .where(sql`${hypeVotes.weekId} = ANY(${monthWeekIds})`);
 
-  const voteCountsByGiver: Record<number, number> = {};
+  const voteCountsByReceiver: Record<number, number> = {};
   votes.forEach((v) => {
-    voteCountsByGiver[v.giverId] = (voteCountsByGiver[v.giverId] || 0) + 1;
+    voteCountsByReceiver[v.receiverId] = (voteCountsByReceiver[v.receiverId] || 0) + 1;
   });
 
   let maxVotes = 0;
   let skaldPlayerId: number | null = null;
-  for (const [pid, count] of Object.entries(voteCountsByGiver)) {
+  for (const [pid, count] of Object.entries(voteCountsByReceiver)) {
     if (count > maxVotes) {
       maxVotes = count;
       skaldPlayerId = Number(pid);
@@ -489,12 +498,19 @@ async function checkSkald(weekId: number, week: typeof weeks.$inferSelect) {
         .where(eq(weeklyScores.id, existingScore.id));
     }
 
-    await db.insert(milestones).values({
-      playerId: skaldPlayerId,
-      type: "skald_monthly",
-      weekId,
-      value: maxVotes,
-      celebrated: false,
-    });
+    const existingSkald = await db
+      .select()
+      .from(milestones)
+      .where(and(eq(milestones.playerId, skaldPlayerId), eq(milestones.type, "skald_monthly"), eq(milestones.weekId, weekId)))
+      .limit(1);
+    if (existingSkald.length === 0) {
+      await db.insert(milestones).values({
+        playerId: skaldPlayerId,
+        type: "skald_monthly",
+        weekId,
+        value: maxVotes,
+        celebrated: false,
+      });
+    }
   }
 }

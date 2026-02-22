@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { SIGIL_EMOJIS, type Sigil, getPhaseForWeek, WEEKLY_KM_TARGETS } from "@/lib/constants";
+import { SIGIL_EMOJIS, type Sigil, getPhaseForWeek, WEEKLY_KM_TARGETS, getWeekDeadline } from "@/lib/constants";
 
 interface Player {
   id: number;
@@ -203,7 +203,7 @@ export default function SubmitPage() {
 
   // Deadline countdown
   const deadlineStr = week ? (() => {
-    const end = new Date(week.endDate + "T23:59:59+01:00");
+    const end = getWeekDeadline(week.endDate);
     const now = new Date();
     const diff = end.getTime() - now.getTime();
     if (diff <= 0) return "Deadline passed";
