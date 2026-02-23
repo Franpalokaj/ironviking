@@ -13,7 +13,6 @@ function getJwtSecret(): string {
   return secret;
 }
 
-const JWT_SECRET = getJwtSecret();
 const COOKIE_NAME = "iron-viking-token";
 const TOKEN_EXPIRY = "7d";
 
@@ -24,12 +23,12 @@ export interface TokenPayload {
 }
 
 export function signToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: TOKEN_EXPIRY });
 }
 
 export function verifyToken(token: string): TokenPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as TokenPayload;
+    return jwt.verify(token, getJwtSecret()) as TokenPayload;
   } catch {
     return null;
   }

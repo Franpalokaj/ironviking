@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { players } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { verifyPin, signToken, setTokenCookie } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const [player] = await db
       .select()
       .from(players)
-      .where(eq(players.vikingName, vikingName))
+      .where(sql`lower(${players.vikingName}) = ${vikingName.toLowerCase()}`)
       .limit(1);
 
     if (!player) {

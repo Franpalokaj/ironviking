@@ -17,11 +17,13 @@ async function seed() {
   const db = drizzle(sql, { schema });
 
   console.log("Seeding weeks...");
+  // Use UTC noon to avoid timezone boundary issues when converting to date strings
+  const baseDate = new Date(Date.UTC(2026, 1, 23, 12, 0, 0)); // Feb 23, 2026
   for (let w = 1; w <= 28; w++) {
-    const start = new Date(TRAINING_START);
-    start.setDate(start.getDate() + (w - 1) * 7);
+    const start = new Date(baseDate);
+    start.setUTCDate(baseDate.getUTCDate() + (w - 1) * 7);
     const end = new Date(start);
-    end.setDate(end.getDate() + 6);
+    end.setUTCDate(start.getUTCDate() + 6);
 
     const type = w % 2 === 1 ? "competition" : "collaboration";
 
