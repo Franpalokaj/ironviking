@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { getTitleForXP, TITLE_STYLES, CONSOLIDATION_WEEKS, BACKOFF_WEEK } from "@/lib/constants";
 
 interface WeekScore {
@@ -43,13 +43,99 @@ const XP_LINES = [
 type ScoreKey = typeof XP_LINES[number]["key"];
 
 export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: WeeklyRevealProps) {
-  const [phase, setPhase] = useState<"intro" | "breakdown" | "total" | "levelup" | "done">("intro");
+  const [phase, setPhase] = useState<"intro" | "breakdown" | "total" | "levelup">("intro");
   const [visibleLines, setVisibleLines] = useState(0);
   const [displayXp, setDisplayXp] = useState(prevXp);
+  const [countDone, setCountDone] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   const didLevelUp = score.titleAfter !== prevTitle;
   const activeLines = XP_LINES.filter((line) => (score[line.key as ScoreKey] as number) > 0);
   const activeLineCount = activeLines.length;
+
+  const getCtx = useCallback(() => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new AudioContext();
+    }
+    const ctx = audioCtxRef.current;
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }, []);
+
+  const playTick = useCallback(() => {
+    try {
+      const ctx = getCtx();
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(900, t);
+      osc.frequency.exponentialRampToValueAtTime(600, t + 0.06);
+      gain.gain.setValueAtTime(0.12, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      osc.start(t);
+      osc.stop(t + 0.08);
+    } catch { /* audio not available */ }
+  }, [getCtx]);
+
+  const playTotalDing = useCallback(() => {
+    try {
+      const ctx = getCtx();
+      const t = ctx.currentTime;
+
+      // Two-tone "ding" — root + fifth for a satisfying chord
+      [660, 990].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(i === 0 ? 0.18 : 0.10, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+        osc.start(t);
+        osc.stop(t + 0.8);
+      });
+    } catch { /* audio not available */ }
+  }, [getCtx]);
+
+  const playLevelUp = useCallback(() => {
+    try {
+      const ctx = getCtx();
+      const t = ctx.currentTime;
+
+      // Rising arpeggio: C5 → E5 → G5 → C6
+      const notes = [523, 659, 784, 1047];
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, t + i * 0.12);
+        gain.gain.setValueAtTime(0, t + i * 0.12);
+        gain.gain.linearRampToValueAtTime(0.18, t + i * 0.12 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.7);
+        osc.start(t + i * 0.12);
+        osc.stop(t + i * 0.12 + 0.7);
+      });
+
+      // Sub-boom for weight under the arpeggio
+      const sub = ctx.createOscillator();
+      const subGain = ctx.createGain();
+      sub.connect(subGain);
+      subGain.connect(ctx.destination);
+      sub.type = "sine";
+      sub.frequency.setValueAtTime(110, t);
+      sub.frequency.exponentialRampToValueAtTime(55, t + 0.6);
+      subGain.gain.setValueAtTime(0.2, t);
+      subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+      sub.start(t);
+      sub.stop(t + 0.7);
+    } catch { /* audio not available */ }
+  }, [getCtx]);
 
   // Intro -> breakdown after 1.5s
   useEffect(() => {
@@ -58,18 +144,21 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
     return () => clearTimeout(t);
   }, [phase]);
 
-  // Reveal breakdown lines one by one
+  // Reveal breakdown lines one by one, with a tick for each
   useEffect(() => {
     if (phase !== "breakdown") return;
     if (visibleLines >= activeLineCount) {
       const t = setTimeout(() => setPhase("total"), 600);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => setVisibleLines(v => v + 1), 280);
+    const t = setTimeout(() => {
+      playTick();
+      setVisibleLines(v => v + 1);
+    }, 280);
     return () => clearTimeout(t);
-  }, [phase, visibleLines, activeLineCount]);
+  }, [phase, visibleLines, activeLineCount, playTick]);
 
-  // Count up XP display
+  // Count up XP display — no auto-transition; just sets countDone
   useEffect(() => {
     if (phase !== "total") return;
     const target = score.xpTotalAfter;
@@ -85,14 +174,21 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
       if (step >= steps) {
         clearInterval(interval);
         setDisplayXp(target);
-        setTimeout(() => {
-          if (didLevelUp) setPhase("levelup");
-          else setPhase("done");
-        }, 800);
+        playTotalDing();
+        setCountDone(true);
       }
     }, duration / steps);
     return () => clearInterval(interval);
-  }, [phase, prevXp, score.xpTotalAfter, didLevelUp]);
+  }, [phase, prevXp, score.xpTotalAfter, playTotalDing]);
+
+  function handleContinue() {
+    if (didLevelUp) {
+      playLevelUp();
+      setPhase("levelup");
+    } else {
+      onDismiss();
+    }
+  }
 
   const titleStyle = TITLE_STYLES[score.titleAfter] || TITLE_STYLES["Thrall"];
   const berserker = score.berserkerMultiplier > 1;
@@ -117,8 +213,8 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
           </div>
         )}
 
-        {/* BREAKDOWN */}
-        {(phase === "breakdown" || phase === "total" || phase === "done") && (
+        {/* BREAKDOWN + TOTAL */}
+        {(phase === "breakdown" || phase === "total") && (
           <div className="animate-[fadeIn_0.4s_ease-out]">
             <div className="text-center mb-4">
               <h2 className="text-lg font-[family-name:var(--font-cinzel)] font-bold text-fire">
@@ -170,7 +266,7 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
               )}
             </div>
 
-            {(phase === "total" || phase === "done") && (
+            {phase === "total" && (
               <div className="bg-fire/10 border border-fire/30 rounded-lg p-4 text-center animate-[fadeIn_0.5s_ease-out]">
                 <div className="text-xs text-muted mb-1">XP Earned This Week</div>
                 <div className="text-3xl font-bold text-fire font-[family-name:var(--font-cinzel)]">
@@ -180,12 +276,12 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
               </div>
             )}
 
-            {phase === "done" && (
+            {phase === "total" && countDone && (
               <button
-                onClick={onDismiss}
+                onClick={handleContinue}
                 className="w-full mt-4 bg-fire text-background font-[family-name:var(--font-cinzel)] font-bold py-3 rounded-lg hover:bg-fire/90 transition-colors animate-[fadeIn_0.4s_ease-out]"
               >
-                To the Leaderboard →
+                {didLevelUp ? "Continue →" : "To the Leaderboard →"}
               </button>
             )}
           </div>
