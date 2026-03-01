@@ -40,8 +40,6 @@ const CARD_GAP = 8;
 
 export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: LeaderboardRevealProps) {
   const [phase, setPhase] = useState<"intro" | "old" | "shuffle" | "highlight">("intro");
-  const audioCtxRef = useRef<AudioContext | null>(null);
-
   const me = players.find(p => p.playerId === myPlayerId);
 
   // Sorted arrays — stable across renders
@@ -51,56 +49,9 @@ export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: Le
 
   const playThud = useCallback(() => {
     try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioContext();
-      }
-      const ctx = audioCtxRef.current;
-      if (ctx.state === "suspended") ctx.resume();
-      const t = ctx.currentTime;
-
-      // Deep boom layer — low sine sweep
-      const boom = ctx.createOscillator();
-      const boomGain = ctx.createGain();
-      boom.connect(boomGain);
-      boomGain.connect(ctx.destination);
-      boom.type = "sine";
-      boom.frequency.setValueAtTime(80, t);
-      boom.frequency.exponentialRampToValueAtTime(22, t + 0.5);
-      boomGain.gain.setValueAtTime(0.5, t);
-      boomGain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-      boom.start(t);
-      boom.stop(t + 0.6);
-
-      // Sub-harmonic punch for weight
-      const sub = ctx.createOscillator();
-      const subGain = ctx.createGain();
-      sub.connect(subGain);
-      subGain.connect(ctx.destination);
-      sub.type = "triangle";
-      sub.frequency.setValueAtTime(40, t);
-      sub.frequency.exponentialRampToValueAtTime(10, t + 0.3);
-      subGain.gain.setValueAtTime(0.35, t);
-      subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-      sub.start(t);
-      sub.stop(t + 0.35);
-
-      // Attack transient — white noise burst for impact click
-      const bufferSize = ctx.sampleRate * 0.08;
-      const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1);
-      const noise = ctx.createBufferSource();
-      noise.buffer = noiseBuffer;
-      const noiseFilter = ctx.createBiquadFilter();
-      noiseFilter.type = "lowpass";
-      noiseFilter.frequency.value = 300;
-      const noiseGain = ctx.createGain();
-      noise.connect(noiseFilter);
-      noiseFilter.connect(noiseGain);
-      noiseGain.connect(ctx.destination);
-      noiseGain.gain.setValueAtTime(0.25, t);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-      noise.start(t);
+      const audio = new Audio("/sounds/thud.mp3");
+      audio.volume = 0.85;
+      audio.play().catch(() => {});
     } catch { /* audio not available */ }
   }, []);
 

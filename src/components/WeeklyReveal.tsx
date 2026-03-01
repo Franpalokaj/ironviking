@@ -1,7 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getTitleForXP, TITLE_STYLES, CONSOLIDATION_WEEKS, BACKOFF_WEEK } from "@/lib/constants";
+
+function playSound(src: string, volume = 1.0) {
+  try {
+    const audio = new Audio(src);
+    audio.volume = volume;
+    audio.play().catch(() => {});
+  } catch { /* audio not available */ }
+}
 
 interface WeekScore {
   weekId: number;
@@ -47,95 +55,13 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
   const [visibleLines, setVisibleLines] = useState(0);
   const [displayXp, setDisplayXp] = useState(prevXp);
   const [countDone, setCountDone] = useState(false);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-
   const didLevelUp = score.titleAfter !== prevTitle;
   const activeLines = XP_LINES.filter((line) => (score[line.key as ScoreKey] as number) > 0);
   const activeLineCount = activeLines.length;
 
-  const getCtx = useCallback(() => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new AudioContext();
-    }
-    const ctx = audioCtxRef.current;
-    if (ctx.state === "suspended") ctx.resume();
-    return ctx;
-  }, []);
-
-  const playTick = useCallback(() => {
-    try {
-      const ctx = getCtx();
-      const t = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(900, t);
-      osc.frequency.exponentialRampToValueAtTime(600, t + 0.06);
-      gain.gain.setValueAtTime(0.12, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-      osc.start(t);
-      osc.stop(t + 0.08);
-    } catch { /* audio not available */ }
-  }, [getCtx]);
-
-  const playTotalDing = useCallback(() => {
-    try {
-      const ctx = getCtx();
-      const t = ctx.currentTime;
-
-      // Two-tone "ding" — root + fifth for a satisfying chord
-      [660, 990].forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(freq, t);
-        gain.gain.setValueAtTime(i === 0 ? 0.18 : 0.10, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
-        osc.start(t);
-        osc.stop(t + 0.8);
-      });
-    } catch { /* audio not available */ }
-  }, [getCtx]);
-
-  const playLevelUp = useCallback(() => {
-    try {
-      const ctx = getCtx();
-      const t = ctx.currentTime;
-
-      // Rising arpeggio: C5 → E5 → G5 → C6
-      const notes = [523, 659, 784, 1047];
-      notes.forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(freq, t + i * 0.12);
-        gain.gain.setValueAtTime(0, t + i * 0.12);
-        gain.gain.linearRampToValueAtTime(0.18, t + i * 0.12 + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.7);
-        osc.start(t + i * 0.12);
-        osc.stop(t + i * 0.12 + 0.7);
-      });
-
-      // Sub-boom for weight under the arpeggio
-      const sub = ctx.createOscillator();
-      const subGain = ctx.createGain();
-      sub.connect(subGain);
-      subGain.connect(ctx.destination);
-      sub.type = "sine";
-      sub.frequency.setValueAtTime(110, t);
-      sub.frequency.exponentialRampToValueAtTime(55, t + 0.6);
-      subGain.gain.setValueAtTime(0.2, t);
-      subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
-      sub.start(t);
-      sub.stop(t + 0.7);
-    } catch { /* audio not available */ }
-  }, [getCtx]);
+  const playTick     = useCallback(() => playSound("/sounds/tick.mp3", 0.55), []);
+  const playTotalDing = useCallback(() => playSound("/sounds/sword-draw.mp3", 0.75), []);
+  const playLevelUp  = useCallback(() => playSound("/sounds/war-horn.mp3", 0.8), []);
 
   // Intro -> breakdown after 1.5s
   useEffect(() => {
