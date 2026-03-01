@@ -56,7 +56,7 @@ interface PrTrial {
   success: boolean | null;
 }
 
-type Tab = "weeks" | "challenges" | "invites" | "submissions" | "pr-trials" | "hype-votes";
+type Tab = "weeks" | "challenges" | "invites" | "submissions" | "pr-trials" | "hype-votes" | "players";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -67,7 +67,10 @@ export default function AdminPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [prTrials, setPrTrials] = useState<PrTrial[]>([]);
   const [hypeVotes, setHypeVotes] = useState<{ giverId: number; receiverId: number; weekId: number }[]>([]);
-  const [players, setPlayers] = useState<{ id: number; vikingName: string | null }[]>([]);
+  const [players, setPlayers] = useState<{ id: number; vikingName: string | null; sigil: string | null; weeklyKmGoal: number | null; isAdmin: boolean; onboardingComplete: boolean }[]>([]);
+  const [editingPlayer, setEditingPlayer] = useState<number | null>(null);
+  const [editSigil, setEditSigil] = useState("");
+  const [editKmGoal, setEditKmGoal] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
@@ -183,6 +186,22 @@ export default function AdminPage() {
     if (selectedWeek) loadSubmissions(selectedWeek);
   }
 
+  async function savePlayerEdit(playerId: number) {
+    const updates: Record<string, unknown> = { playerId };
+    if (editSigil) updates.sigil = editSigil;
+    if (editKmGoal) updates.weeklyKmGoal = parseFloat(editKmGoal);
+    const res = await fetch("/api/admin/players", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    if (res.ok) {
+      setEditingPlayer(null);
+      loadData();
+      setMessage("Player updated.");
+    }
+  }
+
   function playerName(id: number) {
     return players.find(p => p.id === id)?.vikingName || `Player ${id}`;
   }
@@ -221,7 +240,7 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 overflow-x-auto mb-6 border-b border-card-border pb-2">
-          {(["weeks", "challenges", "invites", "submissions", "pr-trials", "hype-votes"] as Tab[]).map(t => (
+          {(["weeks", "players", "challenges", "invites", "submissions", "pr-trials", "hype-votes"] as Tab[]).map(t => (
             <button
               key={t}
               onClick={() => {
@@ -306,6 +325,80 @@ export default function AdminPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* PLAYERS TAB */}
+        {tab === "players" && (
+          <div className="space-y-3">
+            {players.map(p => (
+              <div key={p.id} className="bg-card border border-card-border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <span className="font-bold text-foreground">{p.vikingName || "Unknown"}</span>
+                    {p.isAdmin && <span className="ml-2 text-[10px] text-fire border border-fire/30 px-1 rounded">Admin</span>}
+                    {!p.onboardingComplete && <span className="ml-2 text-[10px] text-yellow-400 border border-yellow-400/30 px-1 rounded">Pending</span>}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => router.push(`/profile/${p.id}`)}
+                      className="text-xs text-muted hover:text-fire"
+                    >View Profile</button>
+                    <button
+                      onClick={() => {
+                        setEditingPlayer(p.id);
+                        setEditSigil(p.sigil || "");
+                        setEditKmGoal(p.weeklyKmGoal?.toString() || "");
+                      }}
+                      className="text-xs text-fire hover:text-fire/80"
+                    >Edit</button>
+                  </div>
+                </div>
+                <div className="text-xs text-muted">
+                  Sigil: {p.sigil || "—"} · Weekly goal: {p.weeklyKmGoal ?? "—"} km
+                </div>
+                {editingPlayer === p.id && (
+                  <div className="mt-3 space-y-2 border-t border-card-border pt-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs text-muted block mb-1">Sigil</label>
+                        <select
+                          value={editSigil}
+                          onChange={(e) => setEditSigil(e.target.value)}
+                          className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground text-xs"
+                        >
+                          <option value="">Keep current</option>
+                          {["wolf","raven","bear","serpent","dragon","axe","shield","longship","crown","skull"].map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted block mb-1">Weekly km goal</label>
+                        <input
+                          type="number"
+                          value={editKmGoal}
+                          onChange={(e) => setEditKmGoal(e.target.value)}
+                          className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground text-xs"
+                          placeholder="e.g. 10"
+                          step="0.5"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => savePlayerEdit(p.id)}
+                        className="bg-fire text-background text-xs font-bold px-3 py-1.5 rounded"
+                      >Save</button>
+                      <button
+                        onClick={() => setEditingPlayer(null)}
+                        className="text-muted text-xs px-3 py-1.5 rounded border border-card-border"
+                      >Cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PHASES, WEEKLY_KM_TARGETS, getCurrentWeekNumber, getPhaseForWeek } from "@/lib/constants";
+import BottomNav from "@/components/BottomNav";
 
 const weekDates: Record<number, string> = {
   1: "Feb 23 – Mar 1", 2: "Mar 2 – 8", 3: "Mar 9 – 15", 4: "Mar 16 – 22",
@@ -160,15 +161,7 @@ export default function GuidePage() {
         </div>
       </div>
 
-      {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-card-border z-40">
-        <div className="max-w-lg mx-auto flex">
-          <button onClick={() => router.push("/dashboard")} className="flex-1 py-3 text-center text-muted text-xs hover:text-fire">⚔️ Board</button>
-          <button onClick={() => router.push("/submit")} className="flex-1 py-3 text-center text-muted text-xs hover:text-fire">📜 Submit</button>
-          <button onClick={() => router.push("/profile/me")} className="flex-1 py-3 text-center text-muted text-xs hover:text-fire">👤 Profile</button>
-          <button onClick={() => router.push("/challenges")} className="flex-1 py-3 text-center text-muted text-xs hover:text-fire">🎯 Quests</button>
-        </div>
-      </nav>
+      <BottomNav active="guide" />
     </div>
   );
 }

@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { SIGIL_EMOJIS, type Sigil, getTitleForXP, getNextTitle, TITLE_STYLES } from "@/lib/constants";
+import { SIGIL_EMOJIS, type Sigil, getTitleForXP, getNextTitle, TITLE_STYLES, BENCHMARK_DEFINITIONS, calculateBenchmarkXP } from "@/lib/constants";
 import XPProgressBar from "@/components/XPProgressBar";
 import RealmBadge from "@/components/RealmBadge";
+import BottomNav from "@/components/BottomNav";
 
 interface PlayerData {
   id: number;
@@ -79,6 +80,13 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [completingId, setCompletingId] = useState<number | null>(null);
+  const [benchmarkBaselines, setBenchmarkBaselines] = useState<{ skill: string; value: number; setAt: string }[]>([]);
+  const [benchmarkGoalsList, setBenchmarkGoalsList] = useState<{ skill: string; goalValue: number; xpReward: number; achieved: boolean }[]>([]);
+  const [recordingSkill, setRecordingSkill] = useState<string | null>(null);
+  const [recordValue, setRecordValue] = useState("");
+  const [settingGoalSkill, setSettingGoalSkill] = useState<string | null>(null);
+  const [goalValue, setGoalValue] = useState("");
+  const [benchmarkSaving, setBenchmarkSaving] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -98,6 +106,13 @@ export default function ProfilePage() {
       setMilestones(data.milestones || []);
       setConquests(data.conquests || []);
       setQuestLog(data.questLog || []);
+
+      const baselineRes = await fetch(`/api/baselines?playerId=${playerId}`);
+      if (baselineRes.ok) {
+        const bData = await baselineRes.json();
+        setBenchmarkBaselines(bData.baselines || []);
+        setBenchmarkGoalsList(bData.goals || []);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -122,6 +137,51 @@ export default function ProfilePage() {
       }
     } finally {
       setCompletingId(null);
+    }
+  }
+
+  async function saveBaseline(skill: string, value: string) {
+    setBenchmarkSaving(true);
+    try {
+      const res = await fetch("/api/baselines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skill, value: parseFloat(value) }),
+      });
+      if (res.ok) {
+        setRecordingSkill(null);
+        setRecordValue("");
+        const bRes = await fetch(`/api/baselines?playerId=${playerId}`);
+        if (bRes.ok) {
+          const bData = await bRes.json();
+          setBenchmarkBaselines(bData.baselines || []);
+          setBenchmarkGoalsList(bData.goals || []);
+        }
+      }
+    } finally {
+      setBenchmarkSaving(false);
+    }
+  }
+
+  async function saveBenchmarkGoal(skill: string, value: string) {
+    setBenchmarkSaving(true);
+    try {
+      const res = await fetch("/api/benchmark-goals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skill, goalValue: parseFloat(value) }),
+      });
+      if (res.ok) {
+        setSettingGoalSkill(null);
+        setGoalValue("");
+        const bRes = await fetch(`/api/baselines?playerId=${playerId}`);
+        if (bRes.ok) {
+          const bData = await bRes.json();
+          setBenchmarkGoalsList(bData.goals || []);
+        }
+      }
+    } finally {
+      setBenchmarkSaving(false);
     }
   }
 
@@ -355,6 +415,126 @@ export default function ProfilePage() {
           </>
         )}
 
+        {/* Benchmarks */}
+        <div className="rune-divider my-6" />
+        <h3 className="font-[family-name:var(--font-cinzel)] font-bold text-sm mb-3">Strength Benchmarks</h3>
+        <div className="space-y-3 mb-6">
+          {BENCHMARK_DEFINITIONS.map((def) => {
+            const baseline = benchmarkBaselines.find(b => b.skill === def.skill);
+            const goal = benchmarkGoalsList.find(g => g.skill === def.skill);
+            const current = baseline?.value ?? null;
+            const progressPct = current !== null
+              ? Math.min(100, Math.round(((current - def.baseline) / (def.raceReady - def.baseline)) * 100))
+              : 0;
+
+            return (
+              <div key={def.skill} className="bg-card border border-card-border rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <span className="font-semibold text-sm text-foreground">{def.label}</span>
+                    {current !== null && (
+                      <span className="text-xs text-muted ml-2">
+                        Current: <span className="text-fire font-bold">{current} {def.unit}</span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted">
+                    Target: <span className="text-fire">{def.raceReady} {def.unit}</span>
+                  </div>
+                </div>
+
+                {current !== null && (
+                  <div className="mb-2">
+                    <div className="h-1.5 bg-card-border rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-fire rounded-full transition-all"
+                        style={{ width: `${Math.max(2, progressPct)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-muted mt-0.5">
+                      <span>{def.baseline} (start)</span>
+                      <span>{def.raceReady} (race ready)</span>
+                    </div>
+                  </div>
+                )}
+
+                {goal && (
+                  <div className={`text-xs mt-1 ${goal.achieved ? "text-green-400" : "text-muted"}`}>
+                    {goal.achieved ? "✓ Goal reached" : `Goal: ${goal.goalValue} ${def.unit}`}
+                    {" · "}<span className="text-gold font-bold">{goal.xpReward} XP</span>
+                    {!goal.achieved && (
+                      <span className="text-[10px] text-muted ml-1">on completion</span>
+                    )}
+                  </div>
+                )}
+
+                {isOwnProfile && (
+                  <div className="flex gap-2 mt-2">
+                    {recordingSkill === def.skill ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={recordValue}
+                          onChange={(e) => setRecordValue(e.target.value)}
+                          className="flex-1 bg-background border border-card-border rounded px-2 py-1 text-foreground text-xs"
+                          placeholder={`${def.unit}`}
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => saveBaseline(def.skill, recordValue)}
+                          disabled={benchmarkSaving || !recordValue}
+                          className="text-xs bg-fire text-background px-2 py-1 rounded font-bold disabled:opacity-50"
+                        >Save</button>
+                        <button onClick={() => setRecordingSkill(null)} className="text-xs text-muted">✕</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setRecordingSkill(def.skill); setRecordValue(current?.toString() || ""); }}
+                        className="text-xs text-fire hover:text-fire/80 border border-fire/30 rounded px-2 py-0.5"
+                      >
+                        {current !== null ? "Update" : "Record"}
+                      </button>
+                    )}
+
+                    {!goal && settingGoalSkill === def.skill ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={goalValue}
+                          onChange={(e) => setGoalValue(e.target.value)}
+                          className="flex-1 bg-background border border-card-border rounded px-2 py-1 text-foreground text-xs"
+                          placeholder={`Goal in ${def.unit}`}
+                          autoFocus
+                        />
+                        {goalValue && (
+                          <span className="text-xs text-gold font-bold">
+                            {calculateBenchmarkXP(def.skill, parseFloat(goalValue), current ?? def.baseline)} XP
+                          </span>
+                        )}
+                        <button
+                          onClick={() => saveBenchmarkGoal(def.skill, goalValue)}
+                          disabled={benchmarkSaving || !goalValue}
+                          className="text-xs bg-gold text-background px-2 py-1 rounded font-bold disabled:opacity-50"
+                        >Set</button>
+                        <button onClick={() => setSettingGoalSkill(null)} className="text-xs text-muted">✕</button>
+                      </div>
+                    ) : !goal && recordingSkill !== def.skill && (
+                      <button
+                        onClick={() => { setSettingGoalSkill(def.skill); setGoalValue(""); }}
+                        className="text-xs text-gold hover:text-gold/80 border border-gold/30 rounded px-2 py-0.5"
+                      >
+                        Set goal
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
         {/* Score history */}
         {scores.length > 0 && (
           <>
@@ -375,15 +555,7 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-card-border z-40">
-        <div className="max-w-lg mx-auto flex">
-          <button onClick={() => router.push("/dashboard")} className="flex-1 py-3 text-center text-muted text-xs hover:text-fire">⚔️ Board</button>
-          <button onClick={() => router.push("/submit")} className="flex-1 py-3 text-center text-muted text-xs hover:text-fire">📜 Submit</button>
-          <button className="flex-1 py-3 text-center text-fire text-xs font-semibold">👤 Profile</button>
-          <button onClick={() => router.push("/challenges")} className="flex-1 py-3 text-center text-muted text-xs hover:text-fire">🎯 Quests</button>
-        </div>
-      </nav>
+      <BottomNav active="profile" />
     </div>
   );
 }

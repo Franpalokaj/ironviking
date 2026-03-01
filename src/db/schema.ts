@@ -68,6 +68,10 @@ export const submissions = pgTable("submissions", {
   secondChallengeAttempted: boolean("second_challenge_attempted").default(true).notNull(),
   hypeVoteFor: integer("hype_vote_for").references(() => players.id).notNull(),
   prTrialResult: real("pr_trial_result"),
+  mtbKm: real("mtb_km"),
+  hikingKm: real("hiking_km"),
+  swimmingKm: real("swimming_km"),
+  ballSportSessions: integer("ball_sport_sessions"),
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
   isLate: boolean("is_late").default(false).notNull(),
 }, (table) => [
@@ -92,6 +96,16 @@ export const baselines = pgTable("baselines", {
   skill: text("skill").notNull(),
   value: real("value").notNull(),
   setAt: timestamp("set_at").defaultNow().notNull(),
+});
+
+export const benchmarkGoals = pgTable("benchmark_goals", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
+  skill: text("skill").notNull(),
+  goalValue: real("goal_value").notNull(),
+  xpReward: integer("xp_reward").notNull(),
+  achieved: boolean("achieved").default(false).notNull(),
+  achievedAt: timestamp("achieved_at"),
 });
 
 export const hypeVotes = pgTable("hype_votes", {

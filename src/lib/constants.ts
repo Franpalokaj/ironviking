@@ -86,7 +86,23 @@ export const RANK_BONUSES = [30, 22, 16, 10, 5, 2] as const;
 export const COMPETITIVE_BONUSES = [30, 20, 15, 10, 5, 0] as const;
 export const COLLABORATIVE_BONUS = 10;
 export const SOLO_CHALLENGE_BONUS = 15;
-export const SHIELD_BONUS = 8;
+export const SHIELD_BONUS = 8; // kept for reference only; scoring now uses SHIELD_BONUS_PCT
+export const SHIELD_BONUS_PCT = 0.10; // 10% of km points per shield received
+
+export const CONSOLIDATION_WEEKS = [6, 11, 15, 19] as const;
+export const BACKOFF_WEEK = 22;
+export const PRE_HOLD_BONUS = 1.5;  // +50% XP the week before a hold/backoff week
+export const HOLD_PENALTY = 0.75;   // -25% XP during hold/backoff weeks
+
+// Activity km multipliers (relative to 1 km of running)
+// Physiological load research + 20% penalty to reward running as primary discipline
+export const ACTIVITY_MULTIPLIERS = {
+  running: 1.0,
+  mtb: 0.35,        // MTB ~2.5x easier per km than running; 1/2.5=0.4, -20% = 0.32, rounded to 0.35
+  hiking: 0.45,     // Flat hiking ~55-60% of running cost per km; -20% ≈ 0.45
+  swimming: 3.0,    // 1km swim ≈ 4km run effort; -20% = 3.2, rounded to 3.0
+  ballSport: 2.5,   // ~60min session ≈ 3km run equivalent; -20% = 2.4, rounded to 2.5 per session
+} as const;
 export const PR_BONUS = 20;
 export const ONTIME_BONUS = 10;
 export const SKALD_BONUS = 10;
@@ -221,4 +237,50 @@ export function getCurrentWeekNumber(): number {
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const week = Math.floor(diffDays / 7) + 1;
   return Math.max(1, Math.min(week, TOTAL_WEEKS));
+}
+
+// Benchmark skill definitions (matching guide page)
+export interface BenchmarkDef {
+  skill: string;
+  label: string;
+  unit: string;
+  baseline: number;   // starting level
+  midpoint: number;   // week 14 target
+  raceReady: number;  // race-ready target
+  higherIsBetter: boolean;
+}
+
+export const BENCHMARK_DEFINITIONS: BenchmarkDef[] = [
+  { skill: "pullups",      label: "Pull-ups",     unit: "reps",  baseline: 3,   midpoint: 7,   raceReady: 13,  higherIsBetter: true  },
+  { skill: "pushups",      label: "Push-ups",     unit: "reps",  baseline: 13,  midpoint: 23,  raceReady: 38,  higherIsBetter: true  },
+  { skill: "deadhang",     label: "Dead hang",    unit: "sec",   baseline: 20,  midpoint: 40,  raceReady: 60,  higherIsBetter: true  },
+  { skill: "farmercarry",  label: "Farmer carry", unit: "kg",    baseline: 20,  midpoint: 24,  raceReady: 28,  higherIsBetter: true  },
+  { skill: "plankhold",    label: "Plank hold",   unit: "sec",   baseline: 45,  midpoint: 90,  raceReady: 120, higherIsBetter: true  },
+];
+
+/**
+ * Calculates XP reward for a benchmark goal using an exponential curve.
+ * The further the goal is beyond the baseline, the more XP is rewarded.
+ * Formula: baseXP * e^(k * normalizedDifficulty), capped at 100 XP.
+ */
+export function calculateBenchmarkXP(skill: string, goalValue: number, currentValue: number): number {
+  const def = BENCHMARK_DEFINITIONS.find(d => d.skill === skill);
+  if (!def) return 10;
+
+  const range = def.raceReady - def.baseline;
+  if (range <= 0) return 10;
+
+  const improvement = def.higherIsBetter
+    ? goalValue - currentValue
+    : currentValue - goalValue;
+
+  // How ambitious is the goal relative to going from baseline to race-ready?
+  const normalizedDifficulty = improvement / range;
+
+  if (normalizedDifficulty <= 0) return 5; // No improvement = minimal XP
+
+  const baseXP = 10;
+  const k = 2.5; // exponential growth factor
+  const xp = Math.round(baseXP * Math.exp(k * normalizedDifficulty));
+  return Math.min(100, Math.max(5, xp));
 }

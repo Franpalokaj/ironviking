@@ -14,7 +14,7 @@ import {
   RANK_BONUSES,
   COMPETITIVE_BONUSES,
   COLLABORATIVE_BONUS,
-  SHIELD_BONUS,
+  SHIELD_BONUS_PCT,
   PR_BONUS,
   ONTIME_BONUS,
   SKALD_BONUS,
@@ -23,6 +23,10 @@ import {
   BERSERKER_MULTIPLIER,
   KM_POINTS_POOL,
   DIFFICULTY_POINTS,
+  CONSOLIDATION_WEEKS,
+  BACKOFF_WEEK,
+  PRE_HOLD_BONUS,
+  HOLD_PENALTY,
   type Difficulty,
   getTitleForXP,
 } from "./constants";
@@ -196,12 +200,12 @@ export async function scoreWeek(weekId: number): Promise<{ success: boolean; mes
     streakMap[p.id] = Math.min(streak * STREAK_BONUS_PER_WEEK, STREAK_BONUS_CAP);
   }
 
-  // STEP 7: Shield points
+  // STEP 7: Shield points — 10% of km points per shield received (scales with effort)
   const weekVotes = await db.select().from(hypeVotes).where(eq(hypeVotes.weekId, weekId));
   const shieldMap: Record<number, number> = {};
   for (const p of allPlayers) {
     const received = weekVotes.filter((v) => v.receiverId === p.id).length;
-    shieldMap[p.id] = received * SHIELD_BONUS;
+    shieldMap[p.id] = Math.round(kmPointsMap[p.id] * SHIELD_BONUS_PCT * received * 10) / 10;
   }
 
   // STEP 8: PR trial bonus
@@ -260,7 +264,18 @@ export async function scoreWeek(weekId: number): Promise<{ success: boolean; mes
       prMap[p.id] +
       ontimeMap[p.id];
 
-    const totalFinal = Math.round(totalRaw * berserkerMap[p.id] * 10) / 10;
+    // Hold/deload week multiplier: -25% during hold weeks, +50% the week before
+    let weekMultiplier = 1.0;
+    const wn = week.weekNumber;
+    const isHoldWeek = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn) || wn === BACKOFF_WEEK;
+    const isPreHoldWeek = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn + 1) || wn + 1 === BACKOFF_WEEK;
+    if (isHoldWeek) {
+      weekMultiplier = HOLD_PENALTY;
+    } else if (isPreHoldWeek) {
+      weekMultiplier = PRE_HOLD_BONUS;
+    }
+
+    const totalFinal = Math.round(totalRaw * berserkerMap[p.id] * weekMultiplier * 10) / 10;
 
     const [prevScore] = await db
       .select()

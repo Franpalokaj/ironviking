@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import BottomNav from "@/components/BottomNav";
 
 interface Challenge {
   id: number;
@@ -188,15 +189,7 @@ export default function ChallengesPage() {
         </div>
       </div>
 
-      {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-card-border z-40">
-        <div className="max-w-lg mx-auto flex">
-          <button onClick={() => router.push("/dashboard")} className="flex-1 py-3 text-center text-muted text-xs hover:text-fire">⚔️ Board</button>
-          <button onClick={() => router.push("/submit")} className="flex-1 py-3 text-center text-muted text-xs hover:text-fire">📜 Submit</button>
-          <button onClick={() => router.push("/profile/me")} className="flex-1 py-3 text-center text-muted text-xs hover:text-fire">👤 Profile</button>
-          <button className="flex-1 py-3 text-center text-fire text-xs font-semibold">🎯 Quests</button>
-        </div>
-      </nav>
+      <BottomNav active="quests" />
     </div>
   );
 }

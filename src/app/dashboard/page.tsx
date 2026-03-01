@@ -6,6 +6,9 @@ import Countdown from "@/components/Countdown";
 import LeaderboardCard from "@/components/LeaderboardCard";
 import ChallengeCard from "@/components/ChallengeCard";
 import MilestoneCelebration from "@/components/MilestoneCelebration";
+import WeeklyReveal from "@/components/WeeklyReveal";
+import LeaderboardReveal from "@/components/LeaderboardReveal";
+import BottomNav from "@/components/BottomNav";
 import { SIGIL_EMOJIS, type Sigil, getPhaseForWeek, WEEKLY_KM_TARGETS } from "@/lib/constants";
 
 interface Player {
@@ -23,6 +26,14 @@ interface WeeklyScore {
   titleAfter: string;
   realmRankWeek: number;
   berserkerMultiplier: number;
+  kmPoints: number;
+  rankBonus: number;
+  soloChallengePoints: number;
+  secondChallengePoints: number;
+  streakBonus: number;
+  shieldPoints: number;
+  prBonus: number;
+  ontimeBonus: number;
 }
 
 interface Challenge {
@@ -66,6 +77,9 @@ export default function DashboardPage() {
   const [shieldCounts, setShieldCounts] = useState<Record<number, number>>({});
   const [view, setView] = useState<LeaderboardView>("week");
   const [loading, setLoading] = useState(true);
+  const [showWeeklyReveal, setShowWeeklyReveal] = useState(false);
+  const [showLeaderboardReveal, setShowLeaderboardReveal] = useState(false);
+  const [prevWeekScores, setPrevWeekScores] = useState<WeeklyScore[]>([]);
 
   const loadData = useCallback(async () => {
     try {
@@ -96,6 +110,24 @@ export default function DashboardPage() {
         setScores(lbData.scores || []);
         setSubmittedIds(lbData.submittedPlayerIds || []);
         setShieldCounts(lbData.shieldCounts || {});
+
+        // Check if we should show the weekly reveal for this scored week
+        const currentScores: WeeklyScore[] = lbData.scores || [];
+        if (weekData.week.isLocked && currentScores.length > 0) {
+          const revealKey = `iron-viking-revealed-week-${weekData.week.id}`;
+          if (!localStorage.getItem(revealKey)) {
+            // Fetch previous week scores for rank comparison
+            if (weekData.week.weekNumber > 1) {
+              const endDate = new Date(weekData.week.startDate);
+              endDate.setDate(endDate.getDate() - 1);
+              const prevMonth = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}`;
+              const prevRes = await fetch(`/api/leaderboard?view=month&month=${prevMonth}`);
+              const prevData = await prevRes.json();
+              setPrevWeekScores(prevData.scores || []);
+            }
+            setShowWeeklyReveal(true);
+          }
+        }
       }
     } catch (err) {
       console.error("Failed to load dashboard:", err);
@@ -227,6 +259,54 @@ export default function DashboardPage() {
   return (
     <div className="min-h-dvh pb-24">
       <MilestoneCelebration />
+
+      {/* Weekly XP reveal — shown once per scored week */}
+      {showWeeklyReveal && session && week && (() => {
+        const myScore = scores.find(s => s.playerId === session.playerId);
+        if (!myScore) return null;
+        const prevScore = prevWeekScores.find((s: MonthlyScore) => s.playerId === session.playerId);
+        const prevXp = prevScore ? prevScore.xpTotal : 0;
+        const prevTitle = prevScore ? prevScore.titleAfter : "Thrall";
+        return (
+          <WeeklyReveal
+            score={{ ...myScore, weekNumber: week.weekNumber, weekId: week.id }}
+            prevXp={prevXp}
+            prevTitle={prevTitle}
+            onDismiss={() => {
+              setShowWeeklyReveal(false);
+              setShowLeaderboardReveal(true);
+            }}
+          />
+        );
+      })()}
+
+      {/* Cinematic leaderboard reveal — shown after weekly XP reveal */}
+      {showLeaderboardReveal && session && week && scores.length > 0 && (() => {
+        const revealPlayers = scores.map(s => {
+          const p = players.find(pl => pl.id === s.playerId);
+          const prevEntry = prevWeekScores.find((ps: MonthlyScore) => ps.playerId === s.playerId);
+          return {
+            playerId: s.playerId,
+            vikingName: p?.vikingName || "Warrior",
+            sigil: p?.sigil || "axe",
+            rank: s.realmRankWeek,
+            prevRank: prevEntry ? (prevWeekScores.indexOf(prevEntry) + 1) : s.realmRankWeek,
+            totalFinal: s.totalFinal,
+            titleAfter: s.titleAfter,
+          };
+        });
+        return (
+          <LeaderboardReveal
+            players={revealPlayers}
+            myPlayerId={session.playerId}
+            onDismiss={() => {
+              setShowLeaderboardReveal(false);
+              const revealKey = `iron-viking-revealed-week-${week.id}`;
+              localStorage.setItem(revealKey, "1");
+            }}
+          />
+        );
+      })()}
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-card-border">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
@@ -261,13 +341,21 @@ export default function DashboardPage() {
         {/* Week info */}
         {week && (
           <div className="text-center mb-4">
-            <div className="text-sm text-muted">
+            <div className="text-lg font-[family-name:var(--font-cinzel)] font-bold text-foreground">
               Week {week.weekNumber} · {phase?.name}
-              {kmTarget && ` · Target: ${kmTarget.min} km`}
             </div>
+            {kmTarget && (
+              <div className="text-2xl font-bold text-fire mt-1">{kmTarget.min} km</div>
+            )}
             <div className="text-xs text-muted mt-1">
               {week.type === "competition" ? "⚔️ Competition Week" : "🛡️ Collaboration Week"}
             </div>
+            <button
+              onClick={() => router.push("/guide")}
+              className="text-xs text-muted hover:text-fire underline underline-offset-2 mt-1 transition-colors"
+            >
+              View full training schedule →
+            </button>
           </div>
         )}
 
@@ -365,23 +453,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-card-border z-40">
-        <div className="max-w-lg mx-auto flex">
-          <button onClick={() => router.push("/dashboard")} className="flex-1 py-3 text-center text-fire text-xs font-semibold">
-            ⚔️ Board
-          </button>
-          <button onClick={() => router.push("/submit")} className="flex-1 py-3 text-center text-muted text-xs hover:text-fire transition-colors">
-            📜 Submit
-          </button>
-          <button onClick={() => router.push(`/profile/${session?.playerId}`)} className="flex-1 py-3 text-center text-muted text-xs hover:text-fire transition-colors">
-            👤 Profile
-          </button>
-          <button onClick={() => router.push("/challenges")} className="flex-1 py-3 text-center text-muted text-xs hover:text-fire transition-colors">
-            🎯 Quests
-          </button>
-        </div>
-      </nav>
+      <BottomNav active="board" profileId={session?.playerId} />
     </div>
   );
 }

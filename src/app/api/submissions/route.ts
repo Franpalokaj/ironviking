@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { submissions, hypeVotes, weeks } from "@/db/schema";
+import { submissions, hypeVotes, weeks, players } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireSession } from "@/lib/auth";
 import { getWeekDeadline } from "@/lib/constants";
+import { scoreWeek } from "@/lib/scoring";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +20,10 @@ export async function POST(request: NextRequest) {
       secondChallengeAttempted,
       hypeVoteFor,
       prTrialResult,
+      mtbKm,
+      hikingKm,
+      swimmingKm,
+      ballSportSessions,
     } = body;
 
     if (!weekId || kmRun === undefined || runsCount === undefined || gymSessions === undefined || !hypeVoteFor) {
@@ -64,6 +69,10 @@ export async function POST(request: NextRequest) {
         secondChallengeAttempted: secondChallengeAttempted !== false,
         hypeVoteFor: Number(hypeVoteFor),
         prTrialResult: prTrialResult != null ? Number(prTrialResult) : null,
+        mtbKm: mtbKm != null ? Number(mtbKm) : null,
+        hikingKm: hikingKm != null ? Number(hikingKm) : null,
+        swimmingKm: swimmingKm != null ? Number(swimmingKm) : null,
+        ballSportSessions: ballSportSessions != null ? Number(ballSportSessions) : null,
         submittedAt: now,
         isLate,
       })
@@ -74,6 +83,13 @@ export async function POST(request: NextRequest) {
       receiverId: Number(hypeVoteFor),
       weekId,
     });
+
+    // Auto-score if all onboarded players have now submitted
+    const allPlayers = await db.select().from(players).where(eq(players.onboardingComplete, true));
+    const weekSubs = await db.select().from(submissions).where(eq(submissions.weekId, weekId));
+    if (weekSubs.length >= allPlayers.length && allPlayers.length > 0) {
+      await scoreWeek(weekId);
+    }
 
     return NextResponse.json({ submission, isLate });
   } catch (err) {
