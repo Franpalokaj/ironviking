@@ -60,7 +60,7 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
   const activeLineCount = activeLines.length;
 
   const playTick     = useCallback(() => playSound("/sounds/tick.mp3", 0.55), []);
-  const playTotalDing = useCallback(() => playSound("/sounds/sword-draw.mp3", 0.75), []);
+  const playTotalDing = useCallback(() => playSound("/sounds/axe-flesh.mp3", 0.75), []);
   const playLevelUp  = useCallback(() => playSound("/sounds/war-horn.mp3", 0.8), []);
 
   // Intro -> breakdown after 1.5s
