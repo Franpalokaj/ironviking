@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { conquests, weeklyScores } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { requireSession } from "@/lib/auth";
+import { requireSession, requireAdmin } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,6 +23,42 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Create a new conquest — players create their own; admins can target any playerId
+export async function POST(request: NextRequest) {
+  try {
+    const session = await requireSession();
+    const body = await request.json();
+    const { title, description, xpReward, playerId: targetId } = body;
+
+    if (!title || !description || !xpReward) {
+      return NextResponse.json({ error: "title, description, and xpReward required" }, { status: 400 });
+    }
+
+    // Admins can create for any player; others can only create for themselves
+    const resolvedPlayerId = session.isAdmin && targetId ? Number(targetId) : session.playerId;
+
+    const [conquest] = await db
+      .insert(conquests)
+      .values({
+        playerId: resolvedPlayerId,
+        title,
+        description,
+        xpReward: Number(xpReward),
+        isCustom: true,
+        adminApproved: true,
+        completed: false,
+      })
+      .returning();
+
+    return NextResponse.json({ conquest });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed";
+    if (message === "Unauthorized") return NextResponse.json({ error: message }, { status: 401 });
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// Mark complete — players can complete their own; admins can complete any
 export async function PATCH(request: NextRequest) {
   try {
     const session = await requireSession();
@@ -32,10 +68,15 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "conquestId required" }, { status: 400 });
     }
 
+    // Find conquest — admins can access any; others only their own
+    const whereClause = session.isAdmin
+      ? eq(conquests.id, conquestId)
+      : and(eq(conquests.id, conquestId), eq(conquests.playerId, session.playerId));
+
     const [conquest] = await db
       .select()
       .from(conquests)
-      .where(and(eq(conquests.id, conquestId), eq(conquests.playerId, session.playerId)))
+      .where(whereClause)
       .limit(1);
 
     if (!conquest) {
@@ -51,12 +92,11 @@ export async function PATCH(request: NextRequest) {
       .set({ completed: true, completedAt: new Date() })
       .where(eq(conquests.id, conquestId));
 
-    // Award XP: add to the player's latest weekly score xpTotalAfter
-    // (If no scores yet, XP will be picked up next scoring run)
+    // Award XP on the quest owner's latest weekly score
     const [latestScore] = await db
       .select()
       .from(weeklyScores)
-      .where(eq(weeklyScores.playerId, session.playerId))
+      .where(eq(weeklyScores.playerId, conquest.playerId))
       .orderBy(desc(weeklyScores.weekId))
       .limit(1);
 
@@ -71,6 +111,27 @@ export async function PATCH(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed";
     if (message === "Unauthorized") return NextResponse.json({ error: message }, { status: 401 });
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// Delete a conquest — admin only
+export async function DELETE(request: NextRequest) {
+  try {
+    await requireAdmin();
+    const { conquestId } = await request.json();
+
+    if (!conquestId) {
+      return NextResponse.json({ error: "conquestId required" }, { status: 400 });
+    }
+
+    await db.delete(conquests).where(eq(conquests.id, conquestId));
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed";
+    if (message === "Unauthorized") return NextResponse.json({ error: message }, { status: 401 });
+    if (message === "Forbidden") return NextResponse.json({ error: message }, { status: 403 });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

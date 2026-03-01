@@ -76,6 +76,12 @@ export default function AdminPage() {
   const [editingPlayer, setEditingPlayer] = useState<number | null>(null);
   const [editSigil, setEditSigil] = useState("");
   const [editKmGoal, setEditKmGoal] = useState("");
+  const [questPlayerId, setQuestPlayerId] = useState<number | null>(null);
+  const [playerQuests, setPlayerQuests] = useState<{ id: number; title: string; description: string; xpReward: number; completed: boolean }[]>([]);
+  const [newQuestTitle, setNewQuestTitle] = useState("");
+  const [newQuestDesc, setNewQuestDesc] = useState("");
+  const [newQuestXp, setNewQuestXp] = useState("50");
+  const [questSaving, setQuestSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
@@ -209,6 +215,56 @@ export default function AdminPage() {
 
   function playerName(id: number) {
     return players.find(p => p.id === id)?.vikingName || `Player ${id}`;
+  }
+
+  async function loadQuestsForPlayer(playerId: number) {
+    const res = await fetch(`/api/conquests?playerId=${playerId}`);
+    if (res.ok) {
+      const data = await res.json();
+      setPlayerQuests(data.conquests || []);
+    }
+    setQuestPlayerId(playerId);
+    setNewQuestTitle("");
+    setNewQuestDesc("");
+    setNewQuestXp("50");
+  }
+
+  async function addQuest(playerId: number) {
+    if (!newQuestTitle.trim() || !newQuestDesc.trim()) return;
+    setQuestSaving(true);
+    try {
+      const res = await fetch("/api/conquests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId, title: newQuestTitle.trim(), description: newQuestDesc.trim(), xpReward: Number(newQuestXp) }),
+      });
+      if (res.ok) {
+        setNewQuestTitle("");
+        setNewQuestDesc("");
+        setNewQuestXp("50");
+        await loadQuestsForPlayer(playerId);
+      }
+    } finally {
+      setQuestSaving(false);
+    }
+  }
+
+  async function markQuestDone(questId: number, playerId: number) {
+    const res = await fetch("/api/conquests", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conquestId: questId, completed: true }),
+    });
+    if (res.ok) await loadQuestsForPlayer(playerId);
+  }
+
+  async function deleteQuest(questId: number, playerId: number) {
+    const res = await fetch("/api/conquests", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conquestId: questId }),
+    });
+    if (res.ok) await loadQuestsForPlayer(playerId);
   }
 
   if (loading) {
@@ -405,9 +461,21 @@ export default function AdminPage() {
                     >View Profile</button>
                     <button
                       onClick={() => {
+                        if (questPlayerId === p.id) {
+                          setQuestPlayerId(null);
+                        } else {
+                          loadQuestsForPlayer(p.id);
+                          setEditingPlayer(null);
+                        }
+                      }}
+                      className="text-xs text-ice hover:text-ice/80"
+                    >Quests</button>
+                    <button
+                      onClick={() => {
                         setEditingPlayer(p.id);
                         setEditSigil(p.sigil || "");
                         setEditKmGoal(p.weeklyKmGoal?.toString() || "");
+                        setQuestPlayerId(null);
                       }}
                       className="text-xs text-fire hover:text-fire/80"
                     >Edit</button>
@@ -416,6 +484,75 @@ export default function AdminPage() {
                 <div className="text-xs text-muted">
                   Sigil: {p.sigil || "—"} · Weekly goal: {p.weeklyKmGoal ?? "—"} km
                 </div>
+                {questPlayerId === p.id && (
+                  <div className="mt-3 border-t border-card-border pt-3 space-y-3">
+                    <div className="text-xs font-bold text-ice mb-2">Personal Quests</div>
+
+                    {/* Existing quests */}
+                    <div className="space-y-1.5">
+                      {playerQuests.length === 0 && (
+                        <div className="text-xs text-muted italic">No quests yet.</div>
+                      )}
+                      {playerQuests.map(q => (
+                        <div key={q.id} className={`flex items-start justify-between gap-2 rounded px-2 py-1.5 text-xs ${q.completed ? "opacity-40" : "bg-background border border-card-border"}`}>
+                          <div className="flex-1 min-w-0">
+                            <span className={`font-semibold ${q.completed ? "line-through text-muted" : "text-foreground"}`}>{q.title}</span>
+                            <span className="text-muted ml-1">· {q.xpReward} XP</span>
+                            <div className="text-muted text-[10px] truncate">{q.description}</div>
+                          </div>
+                          <div className="flex gap-1 flex-shrink-0">
+                            {!q.completed && (
+                              <button
+                                onClick={() => markQuestDone(q.id, p.id)}
+                                className="text-[10px] text-green-400 hover:text-green-300 border border-green-400/30 px-1.5 py-0.5 rounded"
+                              >✓ Done</button>
+                            )}
+                            <button
+                              onClick={() => deleteQuest(q.id, p.id)}
+                              className="text-[10px] text-red-400 hover:text-red-300 border border-red-400/30 px-1.5 py-0.5 rounded"
+                            >✕</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add new quest */}
+                    <div className="border-t border-card-border/50 pt-2 space-y-1.5">
+                      <div className="text-[10px] text-muted font-bold uppercase tracking-wide">Add Quest</div>
+                      <input
+                        type="text"
+                        placeholder="Title"
+                        value={newQuestTitle}
+                        onChange={e => setNewQuestTitle(e.target.value)}
+                        className="w-full bg-background border border-card-border rounded px-2 py-1 text-xs text-foreground"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Description"
+                        value={newQuestDesc}
+                        onChange={e => setNewQuestDesc(e.target.value)}
+                        className="w-full bg-background border border-card-border rounded px-2 py-1 text-xs text-foreground"
+                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          placeholder="XP reward"
+                          value={newQuestXp}
+                          onChange={e => setNewQuestXp(e.target.value)}
+                          className="w-20 bg-background border border-card-border rounded px-2 py-1 text-xs text-foreground"
+                          min="5"
+                          max="500"
+                        />
+                        <button
+                          onClick={() => addQuest(p.id)}
+                          disabled={questSaving || !newQuestTitle.trim()}
+                          className="bg-ice/20 text-ice text-xs font-bold px-3 py-1 rounded hover:bg-ice/30 disabled:opacity-40"
+                        >{questSaving ? "Saving…" : "Add Quest"}</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {editingPlayer === p.id && (
                   <div className="mt-3 space-y-2 border-t border-card-border pt-3">
                     <div className="grid grid-cols-2 gap-2">
