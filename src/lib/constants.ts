@@ -103,6 +103,7 @@ export const ACTIVITY_MULTIPLIERS = {
   swimming: 3.0,    // 1km swim ≈ 4km run effort; -20% = 3.2, rounded to 3.0
   ballSport: 2.5,   // ~60min session ≈ 3km run equivalent; -20% = 2.4, rounded to 2.5 per session
 } as const;
+export const FIRST_SUBMISSION_BONUS = 100; // flat XP for first-ever submission, guarantees the level-up animation
 export const PR_BONUS = 20;
 export const ONTIME_BONUS = 10;
 export const SKALD_BONUS = 10;

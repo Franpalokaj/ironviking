@@ -9,7 +9,17 @@ import MilestoneCelebration from "@/components/MilestoneCelebration";
 import WeeklyReveal from "@/components/WeeklyReveal";
 import LeaderboardReveal from "@/components/LeaderboardReveal";
 import BottomNav from "@/components/BottomNav";
-import { SIGIL_EMOJIS, type Sigil, getPhaseForWeek, WEEKLY_KM_TARGETS } from "@/lib/constants";
+import { SIGIL_EMOJIS, type Sigil, getPhaseForWeek, WEEKLY_KM_TARGETS, CONSOLIDATION_WEEKS, BACKOFF_WEEK } from "@/lib/constants";
+
+interface RevealPlayer {
+  playerId: number;
+  vikingName: string;
+  sigil: string;
+  rank: number;
+  prevRank: number;
+  totalFinal: number;
+  titleAfter: string;
+}
 
 interface Player {
   id: number;
@@ -34,6 +44,7 @@ interface WeeklyScore {
   shieldPoints: number;
   prBonus: number;
   ontimeBonus: number;
+  firstSubmissionBonus: number;
 }
 
 interface Challenge {
@@ -80,6 +91,9 @@ export default function DashboardPage() {
   const [showWeeklyReveal, setShowWeeklyReveal] = useState(false);
   const [showLeaderboardReveal, setShowLeaderboardReveal] = useState(false);
   const [prevWeekScores, setPrevWeekScores] = useState<WeeklyScore[]>([]);
+  const [altRevealPlayers, setAltRevealPlayers] = useState<RevealPlayer[]>([]);
+  const [showAltReveal, setShowAltReveal] = useState(false);
+  const [altRevealKey, setAltRevealKey] = useState<string>("");
 
   const loadData = useCallback(async () => {
     try {
@@ -116,14 +130,11 @@ export default function DashboardPage() {
         if (weekData.week.isLocked && currentScores.length > 0) {
           const revealKey = `iron-viking-revealed-week-${weekData.week.id}`;
           if (!localStorage.getItem(revealKey)) {
-            // Fetch previous week scores for rank comparison
-            if (weekData.week.weekNumber > 1) {
-              const endDate = new Date(weekData.week.startDate);
-              endDate.setDate(endDate.getDate() - 1);
-              const prevMonth = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}`;
-              const prevRes = await fetch(`/api/leaderboard?view=month&month=${prevMonth}`);
-              const prevData = await prevRes.json();
-              setPrevWeekScores(prevData.scores || []);
+            // Fetch actual previous week's per-week scores for rank comparison
+            if (weekData.prevWeekId) {
+              const prevLbRes = await fetch(`/api/leaderboard?view=week&weekId=${weekData.prevWeekId}`);
+              const prevLbData = await prevLbRes.json();
+              setPrevWeekScores(prevLbData.scores || []);
             }
             setShowWeeklyReveal(true);
           }
@@ -141,19 +152,63 @@ export default function DashboardPage() {
   }, [loadData]);
 
   useEffect(() => {
-    if (!week) return;
+    if (!week || !session) return;
+
+    function buildAltReveal(
+      newScores: MonthlyScore[],
+      lsKey: string,
+      lbPlayers: typeof players
+    ) {
+      const storedRaw = localStorage.getItem(lsKey);
+      const storedRanks: Record<number, number> = storedRaw ? JSON.parse(storedRaw) : {};
+      const hasStoredRanks = Object.keys(storedRanks).length > 0;
+
+      if (hasStoredRanks) {
+        const changed = newScores.some((s, i) => storedRanks[s.playerId] !== i + 1);
+        if (changed) {
+          const revealList: RevealPlayer[] = newScores.map((s, i) => {
+            const p = lbPlayers.find(pl => pl.id === s.playerId);
+            return {
+              playerId: s.playerId,
+              vikingName: p?.vikingName || "Warrior",
+              sigil: p?.sigil || "axe",
+              rank: i + 1,
+              prevRank: storedRanks[s.playerId] ?? i + 1,
+              totalFinal: s.totalPoints,
+              titleAfter: s.titleAfter,
+            };
+          });
+          setAltRevealPlayers(revealList);
+          setAltRevealKey(lsKey);
+          setShowAltReveal(true);
+        }
+      }
+      // Always persist current ranks so next visit can compare
+      const newRanks: Record<number, number> = {};
+      newScores.forEach((s, i) => { newRanks[s.playerId] = i + 1; });
+      localStorage.setItem(lsKey, JSON.stringify(newRanks));
+    }
+
     if (view === "month") {
       const endDate = new Date(week.endDate);
       const month = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}`;
       fetch(`/api/leaderboard?view=month&month=${month}`)
         .then((r) => r.json())
-        .then((d) => setMonthlyScores(d.scores || []));
+        .then((d) => {
+          const scores: MonthlyScore[] = d.scores || [];
+          setMonthlyScores(scores);
+          buildAltReveal(scores, `iron-viking-month-ranks-${month}`, players);
+        });
     } else if (view === "alltime") {
       fetch("/api/leaderboard?view=alltime")
         .then((r) => r.json())
-        .then((d) => setAlltimeScores(d.scores || []));
+        .then((d) => {
+          const scores: MonthlyScore[] = d.scores || [];
+          setAlltimeScores(scores);
+          buildAltReveal(scores, "iron-viking-alltime-ranks", players);
+        });
     }
-  }, [view, week]);
+  }, [view, week, session, players]);
 
   if (loading) {
     return (
@@ -264,8 +319,8 @@ export default function DashboardPage() {
       {showWeeklyReveal && session && week && (() => {
         const myScore = scores.find(s => s.playerId === session.playerId);
         if (!myScore) return null;
-        const prevScore = prevWeekScores.find((s: MonthlyScore) => s.playerId === session.playerId);
-        const prevXp = prevScore ? prevScore.xpTotal : 0;
+        const prevScore = prevWeekScores.find((s: WeeklyScore) => s.playerId === session.playerId);
+        const prevXp = prevScore ? prevScore.xpTotalAfter : 0;
         const prevTitle = prevScore ? prevScore.titleAfter : "Thrall";
         return (
           <WeeklyReveal
@@ -280,17 +335,26 @@ export default function DashboardPage() {
         );
       })()}
 
+      {/* Monthly / all-time leaderboard reveal — shown when ranks change on tab switch */}
+      {showAltReveal && session && altRevealPlayers.length > 0 && (
+        <LeaderboardReveal
+          players={altRevealPlayers}
+          myPlayerId={session.playerId}
+          onDismiss={() => setShowAltReveal(false)}
+        />
+      )}
+
       {/* Cinematic leaderboard reveal — shown after weekly XP reveal */}
       {showLeaderboardReveal && session && week && scores.length > 0 && (() => {
         const revealPlayers = scores.map(s => {
           const p = players.find(pl => pl.id === s.playerId);
-          const prevEntry = prevWeekScores.find((ps: MonthlyScore) => ps.playerId === s.playerId);
+          const prevEntry = prevWeekScores.find((ps: WeeklyScore) => ps.playerId === s.playerId);
           return {
             playerId: s.playerId,
             vikingName: p?.vikingName || "Warrior",
             sigil: p?.sigil || "axe",
             rank: s.realmRankWeek,
-            prevRank: prevEntry ? (prevWeekScores.indexOf(prevEntry) + 1) : s.realmRankWeek,
+            prevRank: prevEntry ? prevEntry.realmRankWeek : s.realmRankWeek,
             totalFinal: s.totalFinal,
             titleAfter: s.titleAfter,
           };
@@ -356,6 +420,36 @@ export default function DashboardPage() {
             >
               View full training schedule →
             </button>
+
+            {/* Hold / pre-hold week XP modifier banner */}
+            {(() => {
+              const wn = week.weekNumber;
+              const isHold = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn) || wn === BACKOFF_WEEK;
+              const isPreHold = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn + 1) || wn + 1 === BACKOFF_WEEK;
+              if (isHold) {
+                return (
+                  <div className="mt-3 inline-flex items-center gap-2 bg-ice/10 border border-ice/30 rounded-lg px-4 py-2 animate-[fadeIn_0.6s_ease-out]">
+                    <span className="text-sm">❄️</span>
+                    <div className="text-left">
+                      <div className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-ice">Consolidation Week</div>
+                      <div className="text-[10px] text-muted">XP this week is reduced by 25% — rest, recover, hold your gains.</div>
+                    </div>
+                  </div>
+                );
+              }
+              if (isPreHold) {
+                return (
+                  <div className="mt-3 inline-flex items-center gap-2 bg-gold/10 border border-gold/30 rounded-lg px-4 py-2 animate-[fadeIn_0.6s_ease-out]">
+                    <span className="text-sm">⚡</span>
+                    <div className="text-left">
+                      <div className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-gold">Last Push</div>
+                      <div className="text-[10px] text-muted">XP this week is boosted by 50% — hold week follows. Go hard.</div>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         )}
 

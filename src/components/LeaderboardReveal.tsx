@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { SIGIL_EMOJIS, type Sigil } from "@/lib/constants";
 
 interface RevealPlayer {
@@ -35,69 +35,101 @@ function getRankMessage(rank: number, prevRank: number): string {
   return msgs.same;
 }
 
+const CARD_HEIGHT = 60;
+const CARD_GAP = 8;
+
 export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: LeaderboardRevealProps) {
-  const [phase, setPhase] = useState<"intro" | "animate" | "settle" | "highlight">("intro");
-  const [settledCount, setSettledCount] = useState(0);
-  const [animating, setAnimating] = useState(false);
-  const audioRef = useRef<AudioContext | null>(null);
+  const [phase, setPhase] = useState<"intro" | "old" | "shuffle" | "highlight">("intro");
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   const me = players.find(p => p.playerId === myPlayerId);
 
-  function playThud(delay: number) {
+  // Sorted arrays — stable across renders
+  const byPrev = useRef(
+    [...players].sort((a, b) => a.prevRank - b.prevRank)
+  ).current;
+
+  const playThud = useCallback(() => {
     try {
-      if (!audioRef.current) {
-        audioRef.current = new AudioContext();
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContext();
       }
-      const ctx = audioRef.current;
-      setTimeout(() => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(60, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(20, ctx.currentTime + 0.3);
-        gain.gain.setValueAtTime(0.4, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.4);
-      }, delay);
+      const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") ctx.resume();
+      const t = ctx.currentTime;
+
+      // Deep boom layer — low sine sweep
+      const boom = ctx.createOscillator();
+      const boomGain = ctx.createGain();
+      boom.connect(boomGain);
+      boomGain.connect(ctx.destination);
+      boom.type = "sine";
+      boom.frequency.setValueAtTime(80, t);
+      boom.frequency.exponentialRampToValueAtTime(22, t + 0.5);
+      boomGain.gain.setValueAtTime(0.5, t);
+      boomGain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+      boom.start(t);
+      boom.stop(t + 0.6);
+
+      // Sub-harmonic punch for weight
+      const sub = ctx.createOscillator();
+      const subGain = ctx.createGain();
+      sub.connect(subGain);
+      subGain.connect(ctx.destination);
+      sub.type = "triangle";
+      sub.frequency.setValueAtTime(40, t);
+      sub.frequency.exponentialRampToValueAtTime(10, t + 0.3);
+      subGain.gain.setValueAtTime(0.35, t);
+      subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      sub.start(t);
+      sub.stop(t + 0.35);
+
+      // Attack transient — white noise burst for impact click
+      const bufferSize = ctx.sampleRate * 0.08;
+      const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1);
+      const noise = ctx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const noiseFilter = ctx.createBiquadFilter();
+      noiseFilter.type = "lowpass";
+      noiseFilter.frequency.value = 300;
+      const noiseGain = ctx.createGain();
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+      noiseGain.gain.setValueAtTime(0.25, t);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      noise.start(t);
     } catch { /* audio not available */ }
-  }
+  }, []);
 
-  // Intro → animate after 1s
+  // Phase transitions
   useEffect(() => {
-    if (phase !== "intro") return;
-    const t = setTimeout(() => {
-      setPhase("animate");
-      setAnimating(true);
-    }, 1000);
-    return () => clearTimeout(t);
-  }, [phase]);
-
-  // Animate: settle cards one at a time
-  useEffect(() => {
-    if (phase !== "animate") return;
-    if (settledCount >= players.length) {
-      const t = setTimeout(() => setPhase("settle"), 400);
+    if (phase === "intro") {
+      const t = setTimeout(() => setPhase("old"), 1200);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => {
-      playThud(0);
-      setSettledCount(c => c + 1);
-    }, 600);
-    return () => clearTimeout(t);
-  }, [phase, settledCount, players.length]);
+    if (phase === "old") {
+      const t = setTimeout(() => {
+        playThud();
+        setPhase("shuffle");
+      }, 1000);
+      return () => clearTimeout(t);
+    }
+    if (phase === "shuffle") {
+      const t = setTimeout(() => setPhase("highlight"), 1400);
+      return () => clearTimeout(t);
+    }
+  }, [phase, playThud]);
 
-  useEffect(() => {
-    if (phase !== "settle") return;
-    setAnimating(false);
-    const t = setTimeout(() => setPhase("highlight"), 500);
-    return () => clearTimeout(t);
-  }, [phase]);
-
-  const sortedByFinal = [...players].sort((a, b) => a.rank - b.rank);
-  const sortedByPrev = [...players].sort((a, b) => a.prevRank - b.prevRank);
+  // For each player in byPrev order, compute the Y-offset to move from prevRank position to rank position
+  function getTranslateY(player: RevealPlayer): number {
+    if (phase !== "shuffle" && phase !== "highlight") return 0;
+    const fromIndex = player.prevRank - 1;
+    const toIndex = player.rank - 1;
+    return (toIndex - fromIndex) * (CARD_HEIGHT + CARD_GAP);
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-background/98 flex flex-col px-4 py-6">
@@ -115,44 +147,53 @@ export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: Le
           </div>
         )}
 
-        {(phase === "animate" || phase === "settle" || phase === "highlight") && (
+        {phase !== "intro" && (
           <div className="flex-1 flex flex-col">
             <h2 className="text-center text-sm font-[family-name:var(--font-cinzel)] font-bold text-fire mb-4">
               This Week&apos;s Realm
             </h2>
 
-            <div className="space-y-2 flex-1">
-              {(phase === "animate" ? sortedByPrev : sortedByFinal).map((p, i) => {
-                const isSettled = !animating || i < settledCount;
+            {/* Container with fixed height so cards can move within it */}
+            <div
+              className="relative flex-1"
+              style={{ minHeight: byPrev.length * (CARD_HEIGHT + CARD_GAP) - CARD_GAP }}
+            >
+              {byPrev.map((p, i) => {
                 const isMe = p.playerId === myPlayerId;
                 const moved = p.rank !== p.prevRank;
                 const wentUp = p.rank < p.prevRank;
-                const wentDown = p.rank > p.prevRank;
+                const translateY = getTranslateY(p);
+                const displayRank = (phase === "shuffle" || phase === "highlight") ? p.rank : p.prevRank;
 
                 return (
                   <div
                     key={p.playerId}
-                    className={`rounded-lg border p-3 flex items-center gap-3 transition-all duration-500 ${
+                    className={`absolute left-0 right-0 rounded-lg border p-3 flex items-center gap-3 ${
                       phase === "highlight" && isMe
-                        ? "border-fire bg-fire/10 shadow-[0_0_20px_rgba(var(--fire-rgb),0.3)]"
+                        ? "border-fire bg-fire/10 shadow-[0_0_20px_rgba(var(--fire-rgb),0.3)] z-10"
                         : phase === "highlight" && !isMe
                         ? "opacity-40 border-card-border"
                         : "border-card-border bg-card"
-                    } ${
-                      !isSettled ? "opacity-0 scale-95" : "opacity-100 scale-100"
                     }`}
-                    style={{ transitionDelay: isSettled ? `${i * 80}ms` : "0ms" }}
+                    style={{
+                      height: CARD_HEIGHT,
+                      top: i * (CARD_HEIGHT + CARD_GAP),
+                      transform: `translateY(${translateY}px)`,
+                      transition: (phase === "shuffle" || phase === "highlight")
+                        ? "transform 0.9s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease, border-color 0.5s ease, background-color 0.5s ease, box-shadow 0.5s ease"
+                        : "opacity 0.4s ease",
+                    }}
                   >
                     <span className="text-xl flex-shrink-0">{SIGIL_EMOJIS[(p.sigil || "axe") as Sigil]}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
-                        <span className={`text-xs font-bold text-muted w-4`}>#{p.rank}</span>
+                        <span className="text-xs font-bold text-muted w-4">#{displayRank}</span>
                         <span className="font-semibold text-sm text-foreground truncate">{p.vikingName}</span>
                       </div>
                       <div className="text-[10px] text-muted">{p.titleAfter}</div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {moved && isSettled && (
+                      {moved && (phase === "shuffle" || phase === "highlight") && (
                         <span className={`text-xs font-bold ${wentUp ? "text-green-400" : "text-red-400"}`}>
                           {wentUp ? "▲" : "▼"}{Math.abs(p.rank - p.prevRank)}
                         </span>
@@ -164,7 +205,6 @@ export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: Le
               })}
             </div>
 
-            {/* Personal realm message */}
             {phase === "highlight" && me && (
               <div className="mt-4 bg-fire/10 border border-fire/30 rounded-lg p-4 text-center animate-[fadeIn_0.6s_ease-out]">
                 <p className="text-sm font-[family-name:var(--font-cinzel)] text-fire leading-relaxed">

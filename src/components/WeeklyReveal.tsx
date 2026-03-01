@@ -17,6 +17,7 @@ interface WeekScore {
   shieldPoints: number;
   prBonus: number;
   ontimeBonus: number;
+  firstSubmissionBonus: number;
   berserkerMultiplier: number;
 }
 
@@ -28,6 +29,7 @@ interface WeeklyRevealProps {
 }
 
 const XP_LINES = [
+  { key: "firstSubmissionBonus", label: "First submission",  icon: "⚡" },
   { key: "kmPoints",             label: "Kilometres run",    icon: "🏃" },
   { key: "rankBonus",            label: "Realm rank",        icon: "🏆" },
   { key: "soloChallengePoints",  label: "Solo challenge",    icon: "🎯" },
@@ -46,8 +48,10 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
   const [displayXp, setDisplayXp] = useState(prevXp);
 
   const didLevelUp = score.titleAfter !== prevTitle;
+  const activeLines = XP_LINES.filter((line) => (score[line.key as ScoreKey] as number) > 0);
+  const activeLineCount = activeLines.length;
 
-  // Intro → breakdown after 1.5s
+  // Intro -> breakdown after 1.5s
   useEffect(() => {
     if (phase !== "intro") return;
     const t = setTimeout(() => setPhase("breakdown"), 1500);
@@ -57,13 +61,13 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
   // Reveal breakdown lines one by one
   useEffect(() => {
     if (phase !== "breakdown") return;
-    if (visibleLines >= XP_LINES.length) {
+    if (visibleLines >= activeLineCount) {
       const t = setTimeout(() => setPhase("total"), 600);
       return () => clearTimeout(t);
     }
     const t = setTimeout(() => setVisibleLines(v => v + 1), 280);
     return () => clearTimeout(t);
-  }, [phase, visibleLines]);
+  }, [phase, visibleLines, activeLineCount]);
 
   // Count up XP display
   useEffect(() => {
@@ -118,10 +122,7 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
             </div>
 
             <div className="bg-card border border-card-border rounded-lg overflow-hidden mb-4">
-              {XP_LINES.map((line, i) => {
-                const value = score[line.key as ScoreKey] as number;
-                if (value === 0 && i >= visibleLines) return null;
-                return (
+              {XP_LINES.filter((line) => (score[line.key as ScoreKey] as number) > 0).map((line, i) => (
                   <div
                     key={line.key}
                     className={`flex items-center justify-between px-4 py-2 border-b border-card-border/50 last:border-0 transition-all duration-300 ${
@@ -133,13 +134,12 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
                       <span>{line.icon}</span>
                       <span className="text-muted">{line.label}</span>
                     </div>
-                    <span className={`font-bold text-sm ${value > 0 ? "text-fire" : "text-muted"}`}>
-                      {value > 0 ? `+${Math.round(value * 10) / 10}` : "—"}
+                    <span className="font-bold text-sm text-fire">
+                      +{Math.round((score[line.key as ScoreKey] as number) * 10) / 10}
                     </span>
                   </div>
-                );
-              })}
-              {berserker && visibleLines >= XP_LINES.length && (
+              ))}
+              {berserker && visibleLines >= activeLineCount && (
                 <div className="flex items-center justify-between px-4 py-2 bg-fire/10 animate-[fadeIn_0.4s_ease-out]">
                   <div className="flex items-center gap-2 text-sm">
                     <span>⚡</span>
@@ -187,10 +187,10 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
             <p className="text-muted text-sm mb-2">{getTitleForXP(score.xpTotalAfter).description}</p>
             <div className="rune-divider my-6" />
             <button
-              onClick={() => setPhase("done")}
+              onClick={onDismiss}
               className="w-full bg-fire text-background font-[family-name:var(--font-cinzel)] font-bold py-3 rounded-lg hover:bg-fire/90 transition-colors"
             >
-              Claim Your Title →
+              To the Leaderboard →
             </button>
           </div>
         )}

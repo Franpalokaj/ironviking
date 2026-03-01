@@ -27,6 +27,7 @@ import {
   BACKOFF_WEEK,
   PRE_HOLD_BONUS,
   HOLD_PENALTY,
+  FIRST_SUBMISSION_BONUS,
   type Difficulty,
   getTitleForXP,
 } from "./constants";
@@ -254,29 +255,6 @@ export async function scoreWeek(weekId: number): Promise<{ success: boolean; mes
 
   // STEP 11 & 12: Final score, cumulative XP, title
   for (const p of allPlayers) {
-    const totalRaw =
-      kmPointsMap[p.id] +
-      rankBonusMap[p.id] +
-      soloPtsMap[p.id] +
-      secondPtsMap[p.id] +
-      streakMap[p.id] +
-      shieldMap[p.id] +
-      prMap[p.id] +
-      ontimeMap[p.id];
-
-    // Hold/deload week multiplier: -25% during hold weeks, +50% the week before
-    let weekMultiplier = 1.0;
-    const wn = week.weekNumber;
-    const isHoldWeek = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn) || wn === BACKOFF_WEEK;
-    const isPreHoldWeek = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn + 1) || wn + 1 === BACKOFF_WEEK;
-    if (isHoldWeek) {
-      weekMultiplier = HOLD_PENALTY;
-    } else if (isPreHoldWeek) {
-      weekMultiplier = PRE_HOLD_BONUS;
-    }
-
-    const totalFinal = Math.round(totalRaw * berserkerMap[p.id] * weekMultiplier * 10) / 10;
-
     const [prevScore] = await db
       .select()
       .from(weeklyScores)
@@ -289,6 +267,46 @@ export async function scoreWeek(weekId: number): Promise<{ success: boolean; mes
       )
       .orderBy(desc(weeks.weekNumber))
       .limit(1);
+
+    const isFirstEverSubmission = !prevScore;
+    const firstBonus = isFirstEverSubmission ? FIRST_SUBMISSION_BONUS : 0;
+
+    const totalRaw =
+      kmPointsMap[p.id] +
+      rankBonusMap[p.id] +
+      soloPtsMap[p.id] +
+      secondPtsMap[p.id] +
+      streakMap[p.id] +
+      shieldMap[p.id] +
+      prMap[p.id] +
+      ontimeMap[p.id] +
+      firstBonus;
+
+    // Hold/deload week multiplier: -25% during hold weeks, +50% the week before
+    // First-submission bonus is applied flat outside the multiplier so it always guarantees level-up
+    const rawWithoutFirst =
+      kmPointsMap[p.id] +
+      rankBonusMap[p.id] +
+      soloPtsMap[p.id] +
+      secondPtsMap[p.id] +
+      streakMap[p.id] +
+      shieldMap[p.id] +
+      prMap[p.id] +
+      ontimeMap[p.id];
+
+    let weekMultiplier = 1.0;
+    const wn = week.weekNumber;
+    const isHoldWeek = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn) || wn === BACKOFF_WEEK;
+    const isPreHoldWeek = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn + 1) || wn + 1 === BACKOFF_WEEK;
+    if (isHoldWeek) {
+      weekMultiplier = HOLD_PENALTY;
+    } else if (isPreHoldWeek) {
+      weekMultiplier = PRE_HOLD_BONUS;
+    }
+
+    const totalFinal = Math.round(
+      (rawWithoutFirst * berserkerMap[p.id] * weekMultiplier + firstBonus) * 10
+    ) / 10;
 
     const prevXp = prevScore?.weekly_scores.xpTotalAfter || 0;
     const newXp = prevXp + totalFinal;
@@ -305,6 +323,7 @@ export async function scoreWeek(weekId: number): Promise<{ success: boolean; mes
       shieldPoints: shieldMap[p.id],
       prBonus: prMap[p.id],
       ontimeBonus: ontimeMap[p.id],
+      firstSubmissionBonus: firstBonus,
       berserkerMultiplier: berserkerMap[p.id],
       totalRaw: Math.round(totalRaw * 10) / 10,
       totalFinal,

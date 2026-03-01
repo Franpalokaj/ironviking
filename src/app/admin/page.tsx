@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import WeeklyReveal from "@/components/WeeklyReveal";
+import LeaderboardReveal from "@/components/LeaderboardReveal";
 
 interface Week {
   id: number;
@@ -56,7 +58,9 @@ interface PrTrial {
   success: boolean | null;
 }
 
-type Tab = "weeks" | "challenges" | "invites" | "submissions" | "pr-trials" | "hype-votes" | "players";
+type Tab = "weeks" | "challenges" | "invites" | "submissions" | "pr-trials" | "hype-votes" | "players" | "animations";
+
+type PreviewMode = "none" | "weekly-reveal" | "weekly-reveal-levelup" | "leaderboard-reveal" | "submission-success";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -68,6 +72,7 @@ export default function AdminPage() {
   const [prTrials, setPrTrials] = useState<PrTrial[]>([]);
   const [hypeVotes, setHypeVotes] = useState<{ giverId: number; receiverId: number; weekId: number }[]>([]);
   const [players, setPlayers] = useState<{ id: number; vikingName: string | null; sigil: string | null; weeklyKmGoal: number | null; isAdmin: boolean; onboardingComplete: boolean }[]>([]);
+  const [preview, setPreview] = useState<PreviewMode>("none");
   const [editingPlayer, setEditingPlayer] = useState<number | null>(null);
   const [editSigil, setEditSigil] = useState("");
   const [editKmGoal, setEditKmGoal] = useState("");
@@ -216,7 +221,61 @@ export default function AdminPage() {
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
+  // Mock data for animation previews
+  const mockWeekScoreBase = {
+    weekId: 99,
+    weekNumber: 4,
+    totalFinal: 87.5,
+    xpTotalAfter: 212,
+    titleAfter: "Karl",
+    kmPoints: 42.3,
+    rankBonus: 16,
+    soloChallengePoints: 15,
+    secondChallengePoints: 0,
+    streakBonus: 10,
+    shieldPoints: 4.2,
+    prBonus: 0,
+    ontimeBonus: 10,
+    firstSubmissionBonus: 0,
+    berserkerMultiplier: 1.0,
+  };
+
+  const mockWeekScoreLevelUp = {
+    ...mockWeekScoreBase,
+    totalFinal: 124.5,
+    xpTotalAfter: 145,
+    titleAfter: "Karl",
+    firstSubmissionBonus: 100,
+    berserkerMultiplier: 1.5,
+  };
+
+  const mockLeaderboardPlayers = [
+    { playerId: 1, vikingName: "Ragnar", sigil: "raven", rank: 1, prevRank: 3, totalFinal: 112, titleAfter: "Huscarl" },
+    { playerId: 2, vikingName: "Björn",  sigil: "bear",  rank: 2, prevRank: 1, totalFinal: 98,  titleAfter: "Karl" },
+    { playerId: 3, vikingName: "Sigrid", sigil: "wolf",  rank: 3, prevRank: 2, totalFinal: 85,  titleAfter: "Karl" },
+    { playerId: 4, vikingName: "Ivar",   sigil: "axe",   rank: 4, prevRank: 4, totalFinal: 72,  titleAfter: "Thrall" },
+    { playerId: 5, vikingName: "Freya",  sigil: "crown", rank: 5, prevRank: 6, totalFinal: 58,  titleAfter: "Thrall" },
+    { playerId: 6, vikingName: "Admin",  sigil: "skull", rank: 6, prevRank: 5, totalFinal: 41,  titleAfter: "Thrall" },
+  ];
+
   return (
+    <>
+    {/* Animation previews — rendered as full-screen overlays */}
+    {(preview === "weekly-reveal" || preview === "weekly-reveal-levelup") && (
+      <WeeklyReveal
+        score={preview === "weekly-reveal-levelup" ? mockWeekScoreLevelUp : mockWeekScoreBase}
+        prevXp={preview === "weekly-reveal-levelup" ? 0 : 124}
+        prevTitle={preview === "weekly-reveal-levelup" ? "Thrall" : "Karl"}
+        onDismiss={() => setPreview("none")}
+      />
+    )}
+    {preview === "leaderboard-reveal" && (
+      <LeaderboardReveal
+        players={mockLeaderboardPlayers}
+        myPlayerId={6}
+        onDismiss={() => setPreview("none")}
+      />
+    )}
     <div className="min-h-dvh pb-8">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-card-border">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -240,7 +299,7 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 overflow-x-auto mb-6 border-b border-card-border pb-2">
-          {(["weeks", "players", "challenges", "invites", "submissions", "pr-trials", "hype-votes"] as Tab[]).map(t => (
+          {(["weeks", "players", "challenges", "invites", "submissions", "pr-trials", "hype-votes", "animations"] as Tab[]).map(t => (
             <button
               key={t}
               onClick={() => {
@@ -533,6 +592,75 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* ANIMATIONS TAB */}
+        {tab === "animations" && (
+          <div className="space-y-4">
+            <p className="text-xs text-muted">
+              Preview all animations with mock data. Useful for testing before a real scoring event.
+            </p>
+
+            <div className="grid grid-cols-1 gap-3">
+              <button
+                onClick={() => setPreview("weekly-reveal")}
+                className="bg-card border border-card-border rounded-lg p-4 text-left hover:border-fire/40 transition-colors"
+              >
+                <div className="font-[family-name:var(--font-cinzel)] font-bold text-sm text-fire mb-1">Weekly XP Reveal</div>
+                <div className="text-xs text-muted">Normal week — no level-up. Shows XP breakdown and count-up.</div>
+              </button>
+              <button
+                onClick={() => setPreview("weekly-reveal-levelup")}
+                className="bg-card border border-card-border rounded-lg p-4 text-left hover:border-fire/40 transition-colors"
+              >
+                <div className="font-[family-name:var(--font-cinzel)] font-bold text-sm text-fire mb-1">Weekly XP Reveal + Level Up</div>
+                <div className="text-xs text-muted">Includes first-submission bonus and title unlock animation.</div>
+              </button>
+              <button
+                onClick={() => setPreview("leaderboard-reveal")}
+                className="bg-card border border-card-border rounded-lg p-4 text-left hover:border-fire/40 transition-colors"
+              >
+                <div className="font-[family-name:var(--font-cinzel)] font-bold text-sm text-fire mb-1">Leaderboard Reveal</div>
+                <div className="text-xs text-muted">Cards animate from previous ranks to new positions. Includes realm message.</div>
+              </button>
+              <button
+                onClick={() => setPreview("submission-success")}
+                className="bg-card border border-card-border rounded-lg p-4 text-left hover:border-fire/40 transition-colors"
+              >
+                <div className="font-[family-name:var(--font-cinzel)] font-bold text-sm text-fire mb-1">Submission Success Screen</div>
+                <div className="text-xs text-muted">The post-submit cinematic success state.</div>
+              </button>
+            </div>
+
+            {/* Inline submission success preview */}
+            {preview === "submission-success" && (
+              <div className="fixed inset-0 z-50 bg-background/98 flex flex-col items-center justify-center px-4 animate-[fadeIn_0.6s_ease-out]">
+                <div className="w-full max-w-sm text-center">
+                  <div className="text-6xl mb-6 animate-[fadeIn_1s_ease-out]">⚔️</div>
+                  <h2 className="text-2xl font-[family-name:var(--font-cinzel)] font-bold text-fire mb-2">
+                    Saga Recorded
+                  </h2>
+                  <p className="text-muted text-sm mb-2">Your deeds have been carved into the runes.</p>
+                  <p className="text-xs text-muted mb-6">The gods will tally the scores when all Vikings have spoken.</p>
+                  <div className="rune-divider my-6" />
+                  <div className="bg-card border border-card-border rounded-lg p-4 mb-6 text-left space-y-2">
+                    <div className="text-xs text-muted font-[family-name:var(--font-cinzel)] font-bold uppercase tracking-widest mb-3">Mock submission</div>
+                    <div className="flex justify-between text-sm"><span className="text-muted">Kilometres</span><span className="text-foreground font-bold">24.5 km</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted">Runs</span><span className="text-foreground font-bold">3</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted">Gym</span><span className="text-foreground font-bold">2</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted">Solo challenge</span><span className="text-green-400 font-bold">✓</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted">Shield given to</span><span className="text-foreground font-bold">Björn</span></div>
+                  </div>
+                  <button
+                    onClick={() => setPreview("none")}
+                    className="w-full bg-fire text-background font-[family-name:var(--font-cinzel)] font-bold py-3 rounded-lg hover:bg-fire/90 transition-colors"
+                  >
+                    Close Preview
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* HYPE VOTES TAB */}
         {tab === "hype-votes" && (
           <div>
@@ -565,5 +693,6 @@ export default function AdminPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

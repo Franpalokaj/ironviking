@@ -31,7 +31,17 @@ export async function GET() {
       secondChallenge = c || null;
     }
 
-    return NextResponse.json({ week, soloChallenge, secondChallenge });
+    let prevWeekId: number | null = null;
+    if (weekNum > 1) {
+      const [pw] = await db
+        .select({ id: weeks.id })
+        .from(weeks)
+        .where(eq(weeks.weekNumber, weekNum - 1))
+        .limit(1);
+      if (pw) prevWeekId = pw.id;
+    }
+
+    return NextResponse.json({ week, soloChallenge, secondChallenge, prevWeekId });
   } catch {
     return NextResponse.json({ error: "Failed to load week" }, { status: 500 });
   }
