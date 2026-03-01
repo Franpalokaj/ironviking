@@ -47,12 +47,22 @@ export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: Le
     [...players].sort((a, b) => a.prevRank - b.prevRank)
   ).current;
 
-  const playThud = useCallback(() => {
+  const thudAudio = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     try {
-      const audio = new Audio("/sounds/thud.mp3");
-      audio.volume = 0.85;
-      audio.play().catch(() => {});
+      const a = new Audio("/sounds/thud.mp3");
+      a.volume = 0.85;
+      a.load();
+      thudAudio.current = a;
     } catch { /* audio not available */ }
+  }, []);
+
+  const playThud = useCallback(() => {
+    const a = thudAudio.current;
+    if (!a) return;
+    a.currentTime = 0;
+    a.play().catch(() => {});
   }, []);
 
   // Phase transitions
@@ -62,11 +72,9 @@ export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: Le
       return () => clearTimeout(t);
     }
     if (phase === "old") {
-      const t = setTimeout(() => {
-        playThud();
-        setPhase("shuffle");
-      }, 1000);
-      return () => clearTimeout(t);
+      const t1 = setTimeout(() => playThud(), 700);
+      const t2 = setTimeout(() => setPhase("shuffle"), 1000);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
     }
     if (phase === "shuffle") {
       const t = setTimeout(() => setPhase("highlight"), 1400);

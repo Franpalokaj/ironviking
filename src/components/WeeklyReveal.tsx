@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getTitleForXP, TITLE_STYLES, CONSOLIDATION_WEEKS, BACKOFF_WEEK } from "@/lib/constants";
 
-function playSound(src: string, volume = 1.0) {
+function makeAudio(src: string, volume: number): HTMLAudioElement | null {
+  if (typeof window === "undefined") return null;
   try {
-    const audio = new Audio(src);
-    audio.volume = volume;
-    audio.play().catch(() => {});
-  } catch { /* audio not available */ }
+    const a = new Audio(src);
+    a.volume = volume;
+    a.load(); // preload into browser memory
+    return a;
+  } catch { return null; }
 }
 
 interface WeekScore {
@@ -59,9 +61,36 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
   const activeLines = XP_LINES.filter((line) => (score[line.key as ScoreKey] as number) > 0);
   const activeLineCount = activeLines.length;
 
-  const playTick     = useCallback(() => playSound("/sounds/tick.mp3", 0.55), []);
-  const playTotalDing = useCallback(() => playSound("/sounds/axe-flesh.mp3", 0.75), []);
-  const playLevelUp  = useCallback(() => playSound("/sounds/war-horn.mp3", 0.8), []);
+  // Preload all sounds at mount — eliminates first-play loading latency
+  const tickAudio  = useRef<HTMLAudioElement | null>(null);
+  const dingAudio  = useRef<HTMLAudioElement | null>(null);
+  const hornAudio  = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    tickAudio.current = makeAudio("/sounds/tick.mp3", 0.55);
+    dingAudio.current = makeAudio("/sounds/axe-flesh.mp3", 0.75);
+    hornAudio.current = makeAudio("/sounds/level-up.mp3", 0.8);
+  }, []);
+
+  const playTick = useCallback(() => {
+    const a = tickAudio.current;
+    if (!a) return;
+    a.currentTime = 0;
+    a.play().catch(() => {});
+  }, []);
+
+  const playTotalDing = useCallback(() => {
+    const a = dingAudio.current;
+    if (!a) return;
+    a.currentTime = 0;
+    a.play().catch(() => {});
+  }, []);
+
+  const playLevelUp = useCallback(() => {
+    const a = hornAudio.current;
+    if (!a) return;
+    a.currentTime = 0;
+    a.play().catch(() => {});
+  }, []);
 
   // Intro -> breakdown after 1.5s
   useEffect(() => {
