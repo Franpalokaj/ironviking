@@ -268,7 +268,8 @@ export async function scoreWeek(weekId: number): Promise<{ success: boolean; mes
       .orderBy(desc(weeks.weekNumber))
       .limit(1);
 
-    const isFirstEverSubmission = !prevScore;
+    const hasSubmission = !!subsByPlayer[p.id];
+    const isFirstEverSubmission = hasSubmission && !prevScore;
     const firstBonus = isFirstEverSubmission ? FIRST_SUBMISSION_BONUS : 0;
 
     const totalRaw =

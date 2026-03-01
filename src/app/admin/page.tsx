@@ -227,7 +227,7 @@ export default function AdminPage() {
     weekNumber: 4,
     totalFinal: 87.5,
     xpTotalAfter: 212,
-    titleAfter: "Karl",
+    titleAfter: "Footsoldier",
     kmPoints: 42.3,
     rankBonus: 16,
     soloChallengePoints: 15,
@@ -244,15 +244,15 @@ export default function AdminPage() {
     ...mockWeekScoreBase,
     totalFinal: 124.5,
     xpTotalAfter: 145,
-    titleAfter: "Karl",
+    titleAfter: "Farmhand",
     firstSubmissionBonus: 100,
     berserkerMultiplier: 1.5,
   };
 
   const mockLeaderboardPlayers = [
-    { playerId: 1, vikingName: "Ragnar", sigil: "raven", rank: 1, prevRank: 3, totalFinal: 112, titleAfter: "Huscarl" },
-    { playerId: 2, vikingName: "Björn",  sigil: "bear",  rank: 2, prevRank: 1, totalFinal: 98,  titleAfter: "Karl" },
-    { playerId: 3, vikingName: "Sigrid", sigil: "wolf",  rank: 3, prevRank: 2, totalFinal: 85,  titleAfter: "Karl" },
+    { playerId: 1, vikingName: "Ragnar", sigil: "raven", rank: 1, prevRank: 3, totalFinal: 112, titleAfter: "Shield-Bearer" },
+    { playerId: 2, vikingName: "Björn",  sigil: "bear",  rank: 2, prevRank: 1, totalFinal: 98,  titleAfter: "Footsoldier" },
+    { playerId: 3, vikingName: "Sigrid", sigil: "wolf",  rank: 3, prevRank: 2, totalFinal: 85,  titleAfter: "Footsoldier" },
     { playerId: 4, vikingName: "Ivar",   sigil: "axe",   rank: 4, prevRank: 4, totalFinal: 72,  titleAfter: "Thrall" },
     { playerId: 5, vikingName: "Freya",  sigil: "crown", rank: 5, prevRank: 6, totalFinal: 58,  titleAfter: "Thrall" },
     { playerId: 6, vikingName: "Admin",  sigil: "skull", rank: 6, prevRank: 5, totalFinal: 41,  titleAfter: "Thrall" },

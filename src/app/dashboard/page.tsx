@@ -93,7 +93,6 @@ export default function DashboardPage() {
   const [prevWeekScores, setPrevWeekScores] = useState<WeeklyScore[]>([]);
   const [altRevealPlayers, setAltRevealPlayers] = useState<RevealPlayer[]>([]);
   const [showAltReveal, setShowAltReveal] = useState(false);
-  const [altRevealKey, setAltRevealKey] = useState<string>("");
 
   const loadData = useCallback(async () => {
     try {
@@ -179,7 +178,6 @@ export default function DashboardPage() {
             };
           });
           setAltRevealPlayers(revealList);
-          setAltRevealKey(lsKey);
           setShowAltReveal(true);
         }
       }

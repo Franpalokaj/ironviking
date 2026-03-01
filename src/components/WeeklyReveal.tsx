@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getTitleForXP, TITLE_STYLES } from "@/lib/constants";
+import { getTitleForXP, TITLE_STYLES, CONSOLIDATION_WEEKS, BACKOFF_WEEK } from "@/lib/constants";
 
 interface WeekScore {
   weekId: number;
@@ -97,6 +97,11 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
   const titleStyle = TITLE_STYLES[score.titleAfter] || TITLE_STYLES["Thrall"];
   const berserker = score.berserkerMultiplier > 1;
 
+  const wn = score.weekNumber;
+  const isHoldWeek = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn) || wn === BACKOFF_WEEK;
+  const isPreHoldWeek = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn + 1) || wn + 1 === BACKOFF_WEEK;
+  const weekMultiplier = isHoldWeek ? 0.75 : isPreHoldWeek ? 1.5 : 1.0;
+
   return (
     <div className="fixed inset-0 z-50 bg-background/98 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
@@ -146,6 +151,21 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
                     <span className="text-fire font-bold">Berserker Rage!</span>
                   </div>
                   <span className="text-fire font-bold">×1.5</span>
+                </div>
+              )}
+              {weekMultiplier !== 1.0 && visibleLines >= activeLineCount && (
+                <div className={`flex items-center justify-between px-4 py-2 animate-[fadeIn_0.4s_ease-out] ${
+                  isPreHoldWeek ? "bg-gold/10" : "bg-ice/10"
+                }`}>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span>{isPreHoldWeek ? "⚡" : "❄️"}</span>
+                    <span className={`font-bold ${isPreHoldWeek ? "text-gold" : "text-ice"}`}>
+                      {isPreHoldWeek ? "Last Push" : "Consolidation"}
+                    </span>
+                  </div>
+                  <span className={`font-bold ${isPreHoldWeek ? "text-gold" : "text-ice"}`}>
+                    ×{weekMultiplier}
+                  </span>
                 </div>
               )}
             </div>

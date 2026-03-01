@@ -136,7 +136,7 @@ export const weeklyScores = pgTable("weekly_scores", {
   soloChallengePoints: integer("solo_challenge_pts").notNull(),
   secondChallengePoints: integer("second_challenge_pts").notNull(),
   streakBonus: integer("streak_bonus").notNull(),
-  shieldPoints: integer("shield_pts").notNull(),
+  shieldPoints: real("shield_pts").notNull(),
   prBonus: integer("pr_bonus").notNull(),
   ontimeBonus: integer("ontime_bonus").notNull(),
   firstSubmissionBonus: integer("first_submission_bonus").default(0).notNull(),
