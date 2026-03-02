@@ -5,13 +5,13 @@ import { scoreWeek } from "@/lib/scoring";
 export async function POST(request: NextRequest) {
   try {
     await requireAdmin();
-    const { weekId } = await request.json();
+    const { weekId, force } = await request.json();
 
     if (!weekId) {
       return NextResponse.json({ error: "weekId is required" }, { status: 400 });
     }
 
-    const result = await scoreWeek(weekId);
+    const result = await scoreWeek(weekId, !!force);
     return NextResponse.json(result, { status: result.success ? 200 : 400 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed";

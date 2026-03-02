@@ -350,18 +350,20 @@ export default function DashboardPage() {
 
       {/* Cinematic leaderboard reveal — shown after weekly XP reveal */}
       {showLeaderboardReveal && session && week && scores.length > 0 && (() => {
-        // Sort by totalFinal DESC to derive XP-based ranks
         const sortedCurrent = [...scores].sort((a, b) => b.totalFinal - a.totalFinal);
         const sortedPrev = [...prevWeekScores].sort((a, b) => b.totalFinal - a.totalFinal);
+        const total = sortedCurrent.length;
         const revealPlayers = sortedCurrent.map((s, i) => {
           const p = players.find(pl => pl.id === s.playerId);
           const prevIdx = sortedPrev.findIndex((ps: WeeklyScore) => ps.playerId === s.playerId);
+          // First week (no prev data): start in reverse order so everyone slides into place
+          const prevRank = prevIdx >= 0 ? prevIdx + 1 : total - i;
           return {
             playerId: s.playerId,
             vikingName: p?.vikingName || "Warrior",
             sigil: p?.sigil || "axe",
             rank: i + 1,
-            prevRank: prevIdx >= 0 ? prevIdx + 1 : i + 1,
+            prevRank,
             totalFinal: s.totalFinal,
             titleAfter: s.titleAfter,
           };

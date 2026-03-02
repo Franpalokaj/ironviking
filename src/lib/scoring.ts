@@ -33,10 +33,10 @@ import {
   getTitleForXP,
 } from "./constants";
 
-export async function scoreWeek(weekId: number): Promise<{ success: boolean; message: string }> {
+export async function scoreWeek(weekId: number, force = false): Promise<{ success: boolean; message: string }> {
   const [week] = await db.select().from(weeks).where(eq(weeks.id, weekId)).limit(1);
   if (!week) return { success: false, message: "Week not found" };
-  if (week.isLocked) return { success: false, message: "Week already locked" };
+  if (week.isLocked && !force) return { success: false, message: "Week already locked — use rescore to override" };
 
   const allPlayers = await db.select().from(players).where(eq(players.onboardingComplete, true));
   const weekSubs = await db.select().from(submissions).where(eq(submissions.weekId, weekId));

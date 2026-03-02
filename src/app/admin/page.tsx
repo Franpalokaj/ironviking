@@ -137,12 +137,12 @@ export default function AdminPage() {
     }
   }
 
-  async function scoreWeek(weekId: number) {
+  async function scoreWeek(weekId: number, force = false) {
     setMessage("");
     const res = await fetch("/api/admin/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weekId }),
+      body: JSON.stringify({ weekId, force }),
     });
     const data = await res.json();
     setMessage(data.message || data.error);
@@ -386,7 +386,10 @@ export default function AdminPage() {
                     </div>
                     <div className="flex gap-2">
                       {w.isLocked ? (
-                        <span className="text-xs text-muted">🔒 Scored</span>
+                        <button
+                          onClick={() => scoreWeek(w.id, true)}
+                          className="text-xs bg-gold/20 text-gold px-3 py-1 rounded hover:bg-gold/30"
+                        >Rescore</button>
                       ) : (
                         <button
                           onClick={() => scoreWeek(w.id)}
