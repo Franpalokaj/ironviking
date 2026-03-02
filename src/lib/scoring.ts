@@ -123,11 +123,17 @@ export async function scoreWeek(weekId: number, force = false): Promise<{ succes
       .map((p) => {
         const sub = subsByPlayer[p.id];
         const attempted = sub?.secondChallengeAttempted !== false;
-        return {
-          playerId: p.id,
-          result: attempted && sub?.secondChallengeResult != null ? sub.secondChallengeResult : null,
-          attempted,
-        };
+        let result: number | null = null;
+        if (attempted && sub) {
+          if (sub.secondChallengeResult != null) {
+            result = sub.secondChallengeResult;
+          } else if (secondChallenge.dataType === "count") {
+            // "Most Runs Logged" and similar count challenges: fall back to runsCount
+            // so players who didn't duplicate their entry are still scored
+            result = sub.runsCount ?? null;
+          }
+        }
+        return { playerId: p.id, result, attempted };
       })
       .sort((a, b) => {
         if (a.result === null && b.result === null) return 0;

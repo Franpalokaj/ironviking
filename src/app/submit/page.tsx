@@ -525,17 +525,23 @@ export default function SubmitPage() {
                       Your result
                       {secondChallenge.dataType === "time_mmss" && " (mm:ss)"}
                       {secondChallenge.dataType === "distance_km" && " (km)"}
-                      {secondChallenge.dataType === "count" && " (reps)"}
+                      {secondChallenge.dataType === "count" && " (runs — auto-filled from above)"}
                       {secondChallenge.dataType === "weight_kg" && " (kg)"}
                     </label>
-                    <input
-                      type={secondChallenge.dataType === "time_mmss" ? "text" : "number"}
-                      step={secondChallenge.dataType === "distance_km" ? "0.1" : "1"}
-                      value={secondChallengeResult}
-                      onChange={(e) => { setSecondChallengeResult(e.target.value); saveDraft({ secondChallengeResult: e.target.value }); }}
-                      className="w-full bg-background border border-card-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:border-fire/50"
-                      placeholder={secondChallenge.dataType === "time_mmss" ? "45:30" : "0"}
-                    />
+                    {secondChallenge.dataType === "count" ? (
+                      <div className="w-full bg-background border border-card-border rounded-lg px-4 py-3 text-muted text-sm">
+                        {runsCount} run{runsCount !== 1 ? "s" : ""} — taken from your runs count above
+                      </div>
+                    ) : (
+                      <input
+                        type={secondChallenge.dataType === "time_mmss" ? "text" : "number"}
+                        step={secondChallenge.dataType === "distance_km" ? "0.1" : "1"}
+                        value={secondChallengeResult}
+                        onChange={(e) => { setSecondChallengeResult(e.target.value); saveDraft({ secondChallengeResult: e.target.value }); }}
+                        className="w-full bg-background border border-card-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:border-fire/50"
+                        placeholder={secondChallenge.dataType === "time_mmss" ? "45:30" : "0"}
+                      />
+                    )}
                   </div>
                 )}
               </div>
