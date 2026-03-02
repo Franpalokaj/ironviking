@@ -25,14 +25,22 @@ interface Stats {
 
 interface Score {
   weekId: number;
+  weekNumber: number;
+  kmPoints: number;
+  rankBonus: number;
+  soloChallengePoints: number;
+  secondChallengePoints: number;
+  streakBonus: number;
+  shieldPoints: number;
+  prBonus: number;
+  ontimeBonus: number;
+  firstSubmissionBonus: number;
+  berserkerMultiplier: number;
+  totalRaw: number;
   totalFinal: number;
   xpTotalAfter: number;
   titleAfter: string;
   realmRankWeek: number;
-  kmPoints: number;
-  rankBonus: number;
-  streakBonus: number;
-  shieldPoints: number;
 }
 
 interface Submission {
@@ -40,6 +48,10 @@ interface Submission {
   kmRun: number;
   runsCount: number;
   gymSessions: number;
+  mtbKm: number | null;
+  hikingKm: number | null;
+  swimmingKm: number | null;
+  ballSportSessions: number | null;
 }
 
 interface Milestone {
@@ -87,6 +99,7 @@ export default function ProfilePage() {
   const [settingGoalSkill, setSettingGoalSkill] = useState<string | null>(null);
   const [goalValue, setGoalValue] = useState("");
   const [benchmarkSaving, setBenchmarkSaving] = useState(false);
+  const [showLogbook, setShowLogbook] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -238,8 +251,9 @@ export default function ProfilePage() {
           <h2 className="text-2xl font-[family-name:var(--font-cinzel)] font-bold text-foreground">
             {player.vikingName}
           </h2>
-          <div className={`mt-1 font-[family-name:var(--font-cinzel)] ${titleStyle.color} ${titleStyle.glow ? "einherjar-glow" : ""}`}>
-            <span className="mr-1 opacity-60">{titleStyle.rune}</span>
+          <div className={`mt-1 font-[family-name:var(--font-cinzel)] ${titleStyle.color} ${titleStyle.glowClass || ""}`}>
+            <span className="mr-1">{titleStyle.icon}</span>
+            <span className="mr-1 opacity-50 text-xs">{titleStyle.rune}</span>
             {title.name}
             <span className="text-muted text-sm ml-2">— {title.description}</span>
           </div>
@@ -535,22 +549,70 @@ export default function ProfilePage() {
           })}
         </div>
 
-        {/* Score history */}
+        {/* XP Logbook */}
         {scores.length > 0 && (
           <>
-            <h3 className="font-[family-name:var(--font-cinzel)] font-bold text-sm mb-3">Score History</h3>
-            <div className="space-y-2">
-              {scores.map((s, i) => (
-                <div key={i} className="bg-card border border-card-border rounded-lg p-3 text-xs flex justify-between">
-                  <div>
-                    <RealmBadge rank={s.realmRankWeek} showIcon={false} />
-                    <span className="text-muted ml-2">#{s.realmRankWeek}</span>
-                  </div>
-                  <span className="text-fire font-bold">{Math.round(s.totalFinal)} pts</span>
-                  <span className="text-muted">{Math.round(s.xpTotalAfter)} XP</span>
-                </div>
-              ))}
+            <div
+              className="flex items-center justify-between cursor-pointer mb-3"
+              onClick={() => setShowLogbook(!showLogbook)}
+            >
+              <h3 className="font-[family-name:var(--font-cinzel)] font-bold text-sm">XP Logbook</h3>
+              <span className="text-xs text-muted">{showLogbook ? "▲ Hide" : "▼ Show"}</span>
             </div>
+            {showLogbook && (
+              <div className="space-y-3 mb-6">
+                {[...scores].sort((a, b) => b.weekNumber - a.weekNumber).map((s) => {
+                  const sub = submissions.find(sub => sub.weekId === s.weekId);
+                  const lines: { label: string; value: number }[] = [];
+
+                  if (s.kmPoints > 0) {
+                    const kmLabel = sub ? `${Math.round(sub.kmRun * 10) / 10} km` : "km";
+                    lines.push({ label: kmLabel, value: Math.round(s.kmPoints * 10) / 10 });
+                  }
+                  if (s.rankBonus > 0) lines.push({ label: `Rank #${s.realmRankWeek}`, value: s.rankBonus });
+                  if (s.soloChallengePoints > 0) lines.push({ label: "Solo challenge", value: s.soloChallengePoints });
+                  if (s.secondChallengePoints > 0) lines.push({ label: "Group/comp challenge", value: s.secondChallengePoints });
+                  if (s.streakBonus > 0) lines.push({ label: "Streak", value: s.streakBonus });
+                  if (s.shieldPoints > 0) lines.push({ label: "Shield", value: Math.round(s.shieldPoints * 10) / 10 });
+                  if (s.prBonus > 0) lines.push({ label: "PR trial", value: s.prBonus });
+                  if (s.ontimeBonus > 0) lines.push({ label: "On-time", value: s.ontimeBonus });
+                  if (s.firstSubmissionBonus > 0) lines.push({ label: "First submission", value: s.firstSubmissionBonus });
+
+                  const hasBerserker = s.berserkerMultiplier > 1;
+
+                  return (
+                    <div key={s.weekId} className="bg-card border border-card-border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-muted">
+                          Week {s.weekNumber}
+                        </span>
+                        <span className="text-fire font-bold text-sm">
+                          {Math.round(s.totalFinal)} XP
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted leading-relaxed">
+                        {lines.map((l, i) => (
+                          <span key={i}>
+                            {i > 0 && <span className="mx-1 opacity-40">·</span>}
+                            <span className="text-foreground/80">{l.label}</span>
+                            <span className="text-fire ml-0.5">+{l.value}</span>
+                          </span>
+                        ))}
+                        {hasBerserker && (
+                          <>
+                            <span className="mx-1 opacity-40">·</span>
+                            <span className="text-red-400">Berserker ×{s.berserkerMultiplier}</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-muted mt-1 opacity-60">
+                        Cumulative: {Math.round(s.xpTotalAfter)} XP — {s.titleAfter}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
       </div>

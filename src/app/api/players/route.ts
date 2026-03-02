@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Player not found" }, { status: 404 });
       }
 
-      const scores = await db
+      const rawScores = await db
         .select()
         .from(weeklyScores)
         .where(eq(weeklyScores.playerId, Number(playerId)))
@@ -56,6 +56,11 @@ export async function GET(request: NextRequest) {
       const weekMap = Object.fromEntries(allWeeks.map(w => [w.id, w]));
       const challengeMap = Object.fromEntries(allChallenges.map(c => [c.id, c]));
 
+      const scores = rawScores.map(s => ({
+        ...s,
+        weekNumber: weekMap[s.weekId]?.weekNumber ?? 0,
+      }));
+
       const questLog = subs.map(sub => {
         const week = weekMap[sub.weekId];
         if (!week) return null;
@@ -76,7 +81,7 @@ export async function GET(request: NextRequest) {
       const totalRuns = subs.reduce((sum, s) => sum + s.runsCount, 0);
       const totalGym = subs.reduce((sum, s) => sum + s.gymSessions, 0);
 
-      const latestScore = scores[0];
+      const latestScore = rawScores[0];
 
       return NextResponse.json({
         player: {

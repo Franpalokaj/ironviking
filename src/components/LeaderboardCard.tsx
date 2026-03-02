@@ -72,8 +72,9 @@ export default function LeaderboardCard({
             {isBerserker && <span title="Berserker Mode" className="text-lg">🔥</span>}
             {isSkald && <span title="Skald of the Month" className="text-lg">📜</span>}
           </div>
-          <div className={`text-sm ${titleStyle.color} font-[family-name:var(--font-cinzel)] ${titleStyle.glow ? "einherjar-glow" : ""}`}>
-            <span className="mr-1 opacity-60">{titleStyle.rune}</span>
+          <div className={`text-sm ${titleStyle.color} font-[family-name:var(--font-cinzel)] ${titleStyle.glowClass || ""}`}>
+            <span className="mr-1">{titleStyle.icon}</span>
+            <span className="mr-1 opacity-50 text-xs">{titleStyle.rune}</span>
             {title}
           </div>
           <RealmBadge rank={rank} />

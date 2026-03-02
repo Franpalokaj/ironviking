@@ -93,6 +93,8 @@ export default function DashboardPage() {
   const [prevWeekScores, setPrevWeekScores] = useState<WeeklyScore[]>([]);
   const [altRevealPlayers, setAltRevealPlayers] = useState<RevealPlayer[]>([]);
   const [showAltReveal, setShowAltReveal] = useState(false);
+  const [scoredWeekId, setScoredWeekId] = useState<number | null>(null);
+  const [scoredWeekNumber, setScoredWeekNumber] = useState<number | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -118,18 +120,21 @@ export default function DashboardPage() {
       setPlayers(playersData.players || []);
 
       if (weekData.week) {
-        const lbRes = await fetch(`/api/leaderboard?view=week&weekId=${weekData.week.id}`);
+        // Use the most recently scored week for the leaderboard, falling back to current
+        const leaderboardWeek = weekData.lastScoredWeek || weekData.week;
+        setScoredWeekId(leaderboardWeek.id);
+        setScoredWeekNumber(leaderboardWeek.weekNumber);
+        const lbRes = await fetch(`/api/leaderboard?view=week&weekId=${leaderboardWeek.id}`);
         const lbData = await lbRes.json();
         setScores(lbData.scores || []);
         setSubmittedIds(lbData.submittedPlayerIds || []);
         setShieldCounts(lbData.shieldCounts || {});
 
-        // Check if we should show the weekly reveal for this scored week
+        // Check if we should show the weekly reveal for the scored week
         const currentScores: WeeklyScore[] = lbData.scores || [];
-        if (weekData.week.isLocked && currentScores.length > 0) {
-          const revealKey = `iron-viking-revealed-week-${weekData.week.id}`;
+        if (leaderboardWeek.isLocked && currentScores.length > 0) {
+          const revealKey = `iron-viking-revealed-week-${leaderboardWeek.id}`;
           if (!localStorage.getItem(revealKey)) {
-            // Fetch actual previous week's per-week scores for rank comparison
             if (weekData.prevWeekId) {
               const prevLbRes = await fetch(`/api/leaderboard?view=week&weekId=${weekData.prevWeekId}`);
               const prevLbData = await prevLbRes.json();
@@ -230,19 +235,20 @@ export default function DashboardPage() {
             {players
               .filter((p) => p.onboardingComplete)
               .map((p, i) => (
-                <LeaderboardCard
-                  key={p.id}
-                  vikingName={p.vikingName || "Unknown"}
-                  sigil={p.sigil || "axe"}
-                  title="Thrall"
-                  rank={i + 1}
-                  weekPoints={0}
-                  xp={0}
-                  hasSubmitted={submittedIds.includes(p.id)}
-                  shieldCount={shieldCounts[p.id] || 0}
-                  isBerserker={false}
-                  isSkald={false}
-                />
+                <div key={p.id} onClick={() => router.push(`/profile/${p.id}`)} className="cursor-pointer">
+                  <LeaderboardCard
+                    vikingName={p.vikingName || "Unknown"}
+                    sigil={p.sigil || "axe"}
+                    title="Thrall"
+                    rank={i + 1}
+                    weekPoints={0}
+                    xp={0}
+                    hasSubmitted={submittedIds.includes(p.id)}
+                    shieldCount={shieldCounts[p.id] || 0}
+                    isBerserker={false}
+                    isSkald={false}
+                  />
+                </div>
               ))}
             {players.filter((p) => !p.onboardingComplete).map((_, i) => (
               <div key={`pending-${i}`} className="bg-card border border-card-border rounded-lg p-4 opacity-50">
@@ -258,7 +264,7 @@ export default function DashboardPage() {
 
       return (
         <div className="space-y-3">
-          {scores.map((score) => {
+          {scores.map((score, i) => {
             const player = players.find((p) => p.id === score.playerId);
             if (!player) return null;
             return (
@@ -267,7 +273,7 @@ export default function DashboardPage() {
                   vikingName={player.vikingName || "Unknown"}
                   sigil={player.sigil || "axe"}
                   title={score.titleAfter}
-                  rank={score.realmRankWeek}
+                  rank={i + 1}
                   weekPoints={score.totalFinal}
                   xp={score.xpTotalAfter}
                   hasSubmitted={submittedIds.includes(score.playerId)}
@@ -322,7 +328,7 @@ export default function DashboardPage() {
         const prevTitle = prevScore ? prevScore.titleAfter : "Thrall";
         return (
           <WeeklyReveal
-            score={{ ...myScore, weekNumber: week.weekNumber, weekId: week.id }}
+            score={{ ...myScore, weekNumber: scoredWeekNumber || week.weekNumber, weekId: scoredWeekId || week.id }}
             prevXp={prevXp}
             prevTitle={prevTitle}
             onDismiss={() => {
@@ -344,15 +350,18 @@ export default function DashboardPage() {
 
       {/* Cinematic leaderboard reveal — shown after weekly XP reveal */}
       {showLeaderboardReveal && session && week && scores.length > 0 && (() => {
-        const revealPlayers = scores.map(s => {
+        // Sort by totalFinal DESC to derive XP-based ranks
+        const sortedCurrent = [...scores].sort((a, b) => b.totalFinal - a.totalFinal);
+        const sortedPrev = [...prevWeekScores].sort((a, b) => b.totalFinal - a.totalFinal);
+        const revealPlayers = sortedCurrent.map((s, i) => {
           const p = players.find(pl => pl.id === s.playerId);
-          const prevEntry = prevWeekScores.find((ps: WeeklyScore) => ps.playerId === s.playerId);
+          const prevIdx = sortedPrev.findIndex((ps: WeeklyScore) => ps.playerId === s.playerId);
           return {
             playerId: s.playerId,
             vikingName: p?.vikingName || "Warrior",
             sigil: p?.sigil || "axe",
-            rank: s.realmRankWeek,
-            prevRank: prevEntry ? prevEntry.realmRankWeek : s.realmRankWeek,
+            rank: i + 1,
+            prevRank: prevIdx >= 0 ? prevIdx + 1 : i + 1,
             totalFinal: s.totalFinal,
             titleAfter: s.titleAfter,
           };
@@ -363,7 +372,7 @@ export default function DashboardPage() {
             myPlayerId={session.playerId}
             onDismiss={() => {
               setShowLeaderboardReveal(false);
-              const revealKey = `iron-viking-revealed-week-${week.id}`;
+              const revealKey = `iron-viking-revealed-week-${scoredWeekId || week.id}`;
               localStorage.setItem(revealKey, "1");
             }}
           />
@@ -496,7 +505,7 @@ export default function DashboardPage() {
                 view === v ? "bg-fire/20 text-fire" : "text-muted hover:text-foreground"
               }`}
             >
-              {v === "week" ? "This Week" : v === "month" ? "This Month" : "All Time"}
+              {v === "week" ? (scoredWeekNumber ? `Week ${scoredWeekNumber}` : "This Week") : v === "month" ? "This Month" : "All Time"}
             </button>
           ))}
         </div>

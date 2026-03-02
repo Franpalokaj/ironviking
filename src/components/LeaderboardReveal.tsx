@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { SIGIL_EMOJIS, type Sigil } from "@/lib/constants";
+import { SIGIL_EMOJIS, type Sigil, TITLE_STYLES } from "@/lib/constants";
 
 interface RevealPlayer {
   playerId: number;
@@ -65,16 +65,22 @@ export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: Le
     a.play().catch(() => {});
   }, []);
 
-  // Phase transitions
+  // Phase transitions — double rAF before shuffle ensures mobile paints the "old" frame first
   useEffect(() => {
     if (phase === "intro") {
       const t = setTimeout(() => setPhase("old"), 1200);
       return () => clearTimeout(t);
     }
     if (phase === "old") {
-      const t1 = setTimeout(() => playThud(), 700);
-      const t2 = setTimeout(() => setPhase("shuffle"), 1000);
-      return () => { clearTimeout(t1); clearTimeout(t2); };
+      const t = setTimeout(() => {
+        playThud();
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setPhase("shuffle");
+          });
+        });
+      }, 800);
+      return () => clearTimeout(t);
     }
     if (phase === "shuffle") {
       const t = setTimeout(() => setPhase("highlight"), 1400);
@@ -137,10 +143,12 @@ export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: Le
                     style={{
                       height: CARD_HEIGHT,
                       top: i * (CARD_HEIGHT + CARD_GAP),
-                      transform: `translateY(${translateY}px)`,
+                      transform: `translateY(${translateY}px) translateZ(0)`,
+                      WebkitTransform: `translateY(${translateY}px) translateZ(0)`,
+                      willChange: "transform",
                       transition: (phase === "shuffle" || phase === "highlight")
                         ? "transform 0.9s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease, border-color 0.5s ease, background-color 0.5s ease, box-shadow 0.5s ease"
-                        : "opacity 0.4s ease",
+                        : "none",
                     }}
                   >
                     <span className="text-xl flex-shrink-0">{SIGIL_EMOJIS[(p.sigil || "axe") as Sigil]}</span>
@@ -149,7 +157,14 @@ export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: Le
                         <span className="text-xs font-bold text-muted w-4">#{displayRank}</span>
                         <span className="font-semibold text-sm text-foreground truncate">{p.vikingName}</span>
                       </div>
-                      <div className="text-[10px] text-muted">{p.titleAfter}</div>
+                      {(() => {
+                        const ts = TITLE_STYLES[p.titleAfter] || TITLE_STYLES["Thrall"];
+                        return (
+                          <div className={`text-[10px] ${ts.color} ${ts.glowClass || ""}`}>
+                            {ts.icon} {p.titleAfter}
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {moved && (phase === "shuffle" || phase === "highlight") && (

@@ -31,14 +31,14 @@ export const TITLES = [
   { threshold: 2500, name: "Einherjar", description: "Chosen by Odin himself. Destined for Valhalla." },
 ] as const;
 
-export const TITLE_STYLES: Record<string, { color: string; rune: string; glow?: boolean }> = {
-  Thrall:          { color: "text-muted",  rune: "ᚦ" },
-  Farmhand:        { color: "text-stone",  rune: "ᚠ" },
-  Footsoldier:     { color: "text-bronze", rune: "ᚱ" },
-  "Shield-Bearer": { color: "text-silver", rune: "ᛊ" },
-  Raider:          { color: "text-fire",   rune: "ᚢ" },
-  Jarl:            { color: "text-gold",   rune: "ᛃ" },
-  Einherjar:       { color: "text-gold",   rune: "ᛟ", glow: true },
+export const TITLE_STYLES: Record<string, { color: string; rune: string; icon: string; glow?: boolean; glowClass?: string }> = {
+  Thrall:          { color: "text-thrall",        rune: "ᚦ", icon: "⛓️" },
+  Farmhand:        { color: "text-farmhand",      rune: "ᚠ", icon: "🌾" },
+  Footsoldier:     { color: "text-footsoldier",   rune: "ᚱ", icon: "🗡️" },
+  "Shield-Bearer": { color: "text-shieldbearer",  rune: "ᛊ", icon: "⚜️", glow: true, glowClass: "shieldbearer-glow" },
+  Raider:          { color: "text-raider",         rune: "ᚢ", icon: "☠️", glow: true, glowClass: "raider-glow" },
+  Jarl:            { color: "text-jarl",           rune: "ᛃ", icon: "🦅", glow: true, glowClass: "jarl-glow" },
+  Einherjar:       { color: "text-einherjar",      rune: "ᛟ", icon: "🌟", glow: true, glowClass: "einherjar-glow" },
 };
 
 export type Difficulty = "normal" | "hard" | "epic";

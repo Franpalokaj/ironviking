@@ -13,6 +13,14 @@
   --card: #1a1816;
   --card-border: #2a2520;
   --muted: #8a8070;
+  /* Title tier colors — progressively more vivid */
+  --thrall: #5c5550;
+  --farmhand: #8b7355;
+  --footsoldier: #7a9bb5;
+  --shieldbearer: #b8c4d0;
+  --raider: #e85a30;
+  --jarl: #daa520;
+  --einherjar: #ffd700;
 }
 
 @theme inline {
@@ -28,6 +36,13 @@
   --color-card: var(--card);
   --color-card-border: var(--card-border);
   --color-muted: var(--muted);
+  --color-thrall: var(--thrall);
+  --color-farmhand: var(--farmhand);
+  --color-footsoldier: var(--footsoldier);
+  --color-shieldbearer: var(--shieldbearer);
+  --color-raider: var(--raider);
+  --color-jarl: var(--jarl);
+  --color-einherjar: var(--einherjar);
   --font-heading: var(--font-cinzel);
   --font-body: var(--font-crimson);
 }
@@ -89,8 +104,20 @@ h1, h2, h3, h4, h5, h6 {
   50% { box-shadow: 0 0 15px rgba(184, 115, 51, 0.25); }
 }
 
+.shieldbearer-glow {
+  text-shadow: 0 0 6px rgba(184, 196, 208, 0.4);
+}
+
+.raider-glow {
+  text-shadow: 0 0 8px rgba(232, 90, 48, 0.5);
+}
+
+.jarl-glow {
+  text-shadow: 0 0 10px rgba(218, 165, 32, 0.6), 0 0 20px rgba(218, 165, 32, 0.2);
+}
+
 .einherjar-glow {
-  text-shadow: 0 0 8px rgba(200, 162, 42, 0.6);
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.7), 0 0 30px rgba(255, 215, 0, 0.3), 0 0 50px rgba(255, 215, 0, 0.1);
 }
 
 @keyframes fadeIn {

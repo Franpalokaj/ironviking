@@ -17,8 +17,8 @@ export default function XPProgressBar({ xp, compact }: Props) {
     return (
       <div className={compact ? "" : "mt-2"}>
         <div className="flex justify-between text-xs text-muted mb-1">
-          <span className={`${style.color} font-semibold ${style.glow ? "einherjar-glow" : ""}`}>
-            {style.rune} {current.name}
+          <span className={`${style.color} font-semibold ${style.glowClass || ""}`}>
+            {style.icon} {current.name}
           </span>
           <span>{Math.round(xp)} XP — Max title reached</span>
         </div>
@@ -36,9 +36,9 @@ export default function XPProgressBar({ xp, compact }: Props) {
     <div className={compact ? "" : "mt-2"}>
       <div className="flex justify-between text-xs text-muted mb-1">
         <span className={`${style.color} font-semibold`}>
-          {style.rune} {current.name}
+          {style.icon} {current.name}
         </span>
-        <span>{remaining} XP to {nextStyle ? `${nextStyle.rune} ` : ""}{next.name}</span>
+        <span>{remaining} XP to {nextStyle ? `${nextStyle.icon} ` : ""}{next.name}</span>
       </div>
       <div className="h-2 bg-card-border rounded-full overflow-hidden">
         <div

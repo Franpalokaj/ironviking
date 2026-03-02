@@ -8,6 +8,7 @@ import {
   prTrials,
   challenges,
   milestones,
+  conquests,
 } from "@/db/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
 import {
@@ -112,7 +113,8 @@ export async function scoreWeek(weekId: number): Promise<{ success: boolean; mes
 
   for (const p of allPlayers) {
     const sub = subsByPlayer[p.id];
-    soloPtsMap[p.id] = sub?.soloChallengeDone ? DIFFICULTY_POINTS[soloDiff].solo : 0;
+    // Only award solo points when a solo challenge is actually assigned to this week
+    soloPtsMap[p.id] = soloChallenge && sub?.soloChallengeDone ? DIFFICULTY_POINTS[soloDiff].solo : 0;
     secondPtsMap[p.id] = 0;
   }
 
@@ -131,15 +133,19 @@ export async function scoreWeek(weekId: number): Promise<{ success: boolean; mes
         if (a.result === null && b.result === null) return 0;
         if (a.result === null) return 1;
         if (b.result === null) return -1;
-        // For time-based challenges, lower is better
         if (secondChallenge!.dataType === "time_mmss") return a.result - b.result;
         return b.result - a.result;
       });
 
+    // Award bonuses with proper tie handling — tied results share the best rank's bonus
     competitiveResults.forEach((r, i) => {
-      if (r.result !== null) {
-        secondPtsMap[r.playerId] = COMPETITIVE_BONUSES[Math.min(i, 5)];
+      if (r.result === null) return;
+      let tieRank = i;
+      for (let j = i - 1; j >= 0; j--) {
+        if (competitiveResults[j].result === r.result) tieRank = j;
+        else break;
       }
+      secondPtsMap[r.playerId] = COMPETITIVE_BONUSES[Math.min(tieRank, 5)];
     });
   }
 
@@ -255,21 +261,15 @@ export async function scoreWeek(weekId: number): Promise<{ success: boolean; mes
 
   // STEP 11 & 12: Final score, cumulative XP, title
   for (const p of allPlayers) {
-    const [prevScore] = await db
-      .select()
+    const allPrevScores = await db
+      .select({ totalFinal: weeklyScores.totalFinal })
       .from(weeklyScores)
       .innerJoin(weeks, eq(weeklyScores.weekId, weeks.id))
-      .where(
-        and(
-          eq(weeklyScores.playerId, p.id),
-          sql`${weeks.weekNumber} < ${week.weekNumber}`
-        )
-      )
-      .orderBy(desc(weeks.weekNumber))
-      .limit(1);
+      .where(and(eq(weeklyScores.playerId, p.id), sql`${weeks.weekNumber} < ${week.weekNumber}`));
+    const prevWeeklyXp = allPrevScores.reduce((sum, s) => sum + s.totalFinal, 0);
 
     const hasSubmission = !!subsByPlayer[p.id];
-    const isFirstEverSubmission = hasSubmission && !prevScore;
+    const isFirstEverSubmission = hasSubmission && allPrevScores.length === 0;
     const firstBonus = isFirstEverSubmission ? FIRST_SUBMISSION_BONUS : 0;
 
     const totalRaw =
@@ -309,8 +309,14 @@ export async function scoreWeek(weekId: number): Promise<{ success: boolean; mes
       (rawWithoutFirst * berserkerMap[p.id] * weekMultiplier + firstBonus) * 10
     ) / 10;
 
-    const prevXp = prevScore?.weekly_scores.xpTotalAfter || 0;
-    const newXp = prevXp + totalFinal;
+    // Cumulative XP from scratch — rescore-safe; conquest XP can't be lost by re-running
+    const completedConquests = await db
+      .select({ xpReward: conquests.xpReward })
+      .from(conquests)
+      .where(and(eq(conquests.playerId, p.id), eq(conquests.completed, true)));
+    const conquestXp = completedConquests.reduce((sum, c) => sum + c.xpReward, 0);
+
+    const newXp = prevWeeklyXp + conquestXp + totalFinal;
     const title = getTitleForXP(newXp);
 
     await db.insert(weeklyScores).values({

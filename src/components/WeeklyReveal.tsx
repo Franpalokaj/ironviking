@@ -246,14 +246,14 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
         {phase === "levelup" && (
           <div className="text-center animate-[fadeIn_0.6s_ease-out]">
             <div className="relative inline-block mb-4">
-              <div className={`text-7xl ${titleStyle.glow ? "einherjar-glow" : ""}`}>
-                {titleStyle.rune}
+              <div className={`text-8xl ${titleStyle.glowClass || ""}`}>
+                {titleStyle.icon}
               </div>
-              <div className="absolute inset-0 blur-2xl opacity-50 text-7xl">{titleStyle.rune}</div>
+              <div className="absolute inset-0 blur-2xl opacity-40 text-8xl">{titleStyle.icon}</div>
             </div>
             <div className="text-xs text-muted uppercase tracking-widest mb-2">Title unlocked</div>
-            <h2 className={`text-3xl font-[family-name:var(--font-cinzel)] font-bold mb-1 ${titleStyle.color} ${titleStyle.glow ? "einherjar-glow" : ""}`}>
-              {score.titleAfter}
+            <h2 className={`text-3xl font-[family-name:var(--font-cinzel)] font-bold mb-1 ${titleStyle.color} ${titleStyle.glowClass || ""}`}>
+              <span className="mr-2 opacity-60 text-xl">{titleStyle.rune}</span>{score.titleAfter}
             </h2>
             <p className="text-muted text-sm mb-2">{getTitleForXP(score.xpTotalAfter).description}</p>
             <div className="rune-divider my-6" />

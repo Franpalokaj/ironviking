@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
         .select()
         .from(weeklyScores)
         .where(eq(weeklyScores.weekId, Number(weekId)))
-        .orderBy(weeklyScores.realmRankWeek);
+        .orderBy(desc(weeklyScores.totalFinal));
 
       const subs = await db
         .select()
