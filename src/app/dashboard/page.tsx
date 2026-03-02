@@ -45,6 +45,7 @@ interface WeeklyScore {
   prBonus: number;
   ontimeBonus: number;
   firstSubmissionBonus: number;
+  weeklyGained: number;
 }
 
 interface Challenge {
@@ -274,7 +275,7 @@ export default function DashboardPage() {
                   sigil={player.sigil || "axe"}
                   title={score.titleAfter}
                   rank={i + 1}
-                  weekPoints={score.totalFinal}
+                  weekPoints={score.weeklyGained}
                   xp={score.xpTotalAfter}
                   hasSubmitted={submittedIds.includes(score.playerId)}
                   shieldCount={shieldCounts[score.playerId] || 0}
@@ -350,13 +351,12 @@ export default function DashboardPage() {
 
       {/* Cinematic leaderboard reveal — shown after weekly XP reveal */}
       {showLeaderboardReveal && session && week && scores.length > 0 && (() => {
-        const sortedCurrent = [...scores].sort((a, b) => b.totalFinal - a.totalFinal);
-        const sortedPrev = [...prevWeekScores].sort((a, b) => b.totalFinal - a.totalFinal);
+        const sortedCurrent = [...scores].sort((a, b) => b.weeklyGained - a.weeklyGained);
+        const sortedPrev = [...prevWeekScores].sort((a, b) => (b.weeklyGained || b.totalFinal) - (a.weeklyGained || a.totalFinal));
         const total = sortedCurrent.length;
         const revealPlayers = sortedCurrent.map((s, i) => {
           const p = players.find(pl => pl.id === s.playerId);
           const prevIdx = sortedPrev.findIndex((ps: WeeklyScore) => ps.playerId === s.playerId);
-          // First week (no prev data): start in reverse order so everyone slides into place
           const prevRank = prevIdx >= 0 ? prevIdx + 1 : total - i;
           return {
             playerId: s.playerId,
@@ -364,7 +364,7 @@ export default function DashboardPage() {
             sigil: p?.sigil || "axe",
             rank: i + 1,
             prevRank,
-            totalFinal: s.totalFinal,
+            totalFinal: s.weeklyGained,
             titleAfter: s.titleAfter,
           };
         });

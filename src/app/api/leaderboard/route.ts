@@ -11,11 +11,36 @@ export async function GET(request: NextRequest) {
     const allPlayers = await db.select().from(players).where(eq(players.onboardingComplete, true));
 
     if (view === "week" && weekId) {
-      const scores = await db
+      const rawScores = await db
         .select()
         .from(weeklyScores)
-        .where(eq(weeklyScores.weekId, Number(weekId)))
-        .orderBy(desc(weeklyScores.totalFinal));
+        .where(eq(weeklyScores.weekId, Number(weekId)));
+
+      // Find the previous week's xpTotalAfter per player to compute true weekly gain
+      const [thisWeek] = await db.select().from(weeks).where(eq(weeks.id, Number(weekId))).limit(1);
+      const prevXpMap: Record<number, number> = {};
+      if (thisWeek && thisWeek.weekNumber > 1) {
+        const [prevWeek] = await db
+          .select()
+          .from(weeks)
+          .where(eq(weeks.weekNumber, thisWeek.weekNumber - 1))
+          .limit(1);
+        if (prevWeek) {
+          const prevScores = await db
+            .select({ playerId: weeklyScores.playerId, xpTotalAfter: weeklyScores.xpTotalAfter })
+            .from(weeklyScores)
+            .where(eq(weeklyScores.weekId, prevWeek.id));
+          prevScores.forEach(s => { prevXpMap[s.playerId] = s.xpTotalAfter; });
+        }
+      }
+
+      // weeklyGained = xpTotalAfter - previous cumulative (includes conquest XP)
+      const scores = rawScores
+        .map(s => ({
+          ...s,
+          weeklyGained: Math.round((s.xpTotalAfter - (prevXpMap[s.playerId] || 0)) * 10) / 10,
+        }))
+        .sort((a, b) => b.weeklyGained - a.weeklyGained);
 
       const subs = await db
         .select()
@@ -65,14 +90,14 @@ export async function GET(request: NextRequest) {
       const scores = await db
         .select({
           playerId: weeklyScores.playerId,
-          totalPoints: sql<number>`sum(${weeklyScores.totalFinal})`,
+          totalPoints: sql<number>`max(${weeklyScores.xpTotalAfter})`,
           xpTotal: sql<number>`max(${weeklyScores.xpTotalAfter})`,
           titleAfter: sql<string>`(array_agg(${weeklyScores.titleAfter} order by ${weeklyScores.weekId} desc))[1]`,
         })
         .from(weeklyScores)
         .where(inArray(weeklyScores.weekId, weekIds))
         .groupBy(weeklyScores.playerId)
-        .orderBy(desc(sql`sum(${weeklyScores.totalFinal})`));
+        .orderBy(desc(sql`max(${weeklyScores.xpTotalAfter})`));
 
       return NextResponse.json({ scores, players: allPlayers });
     }
@@ -81,13 +106,13 @@ export async function GET(request: NextRequest) {
       const scores = await db
         .select({
           playerId: weeklyScores.playerId,
-          totalPoints: sql<number>`sum(${weeklyScores.totalFinal})`,
+          totalPoints: sql<number>`max(${weeklyScores.xpTotalAfter})`,
           xpTotal: sql<number>`max(${weeklyScores.xpTotalAfter})`,
           titleAfter: sql<string>`(array_agg(${weeklyScores.titleAfter} order by ${weeklyScores.weekId} desc))[1]`,
         })
         .from(weeklyScores)
         .groupBy(weeklyScores.playerId)
-        .orderBy(desc(sql`sum(${weeklyScores.totalFinal})`));
+        .orderBy(desc(sql`max(${weeklyScores.xpTotalAfter})`));
 
       return NextResponse.json({ scores, players: allPlayers });
     }

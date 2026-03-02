@@ -80,6 +80,7 @@ export default function LeaderboardCard({
           <RealmBadge rank={rank} />
           <div className="mt-2 flex items-center justify-between">
             <span className="text-fire font-bold text-lg">{Math.round(weekPoints)} pts</span>
+            <span className="text-xs text-gold font-semibold">{Math.round(xp)} XP</span>
           </div>
           <XPProgressBar xp={xp} compact />
         </div>
