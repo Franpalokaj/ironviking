@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const LINK_ERRORS: Record<string, string> = {
@@ -10,7 +10,7 @@ const LINK_ERRORS: Record<string, string> = {
   failed: "Something went wrong. Try again or log in with your name and rune-code.",
 };
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [vikingName, setVikingName] = useState("");
@@ -114,5 +114,17 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-dvh flex items-center justify-center px-4">
+        <div className="text-fire font-[family-name:var(--font-cinzel)] animate-pulse">Entering the hall...</div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
