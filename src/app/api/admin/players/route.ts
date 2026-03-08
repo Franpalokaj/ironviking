@@ -16,7 +16,7 @@ export async function PATCH(request: NextRequest) {
     const updates: Partial<{ sigil: string; weeklyKmGoal: number; vikingName: string }> = {};
     if (sigil !== undefined) updates.sigil = sigil;
     if (weeklyKmGoal !== undefined) updates.weeklyKmGoal = Number(weeklyKmGoal);
-    if (vikingName !== undefined) updates.vikingName = vikingName;
+    if (vikingName !== undefined) updates.vikingName = String(vikingName).trim().normalize("NFC") || undefined;
 
     const [updated] = await db
       .update(players)

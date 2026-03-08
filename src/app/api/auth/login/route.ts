@@ -6,25 +6,35 @@ import { verifyPin, signToken, setTokenCookie } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { vikingName, pin } = await request.json();
+    const body = await request.json();
+    const rawName = body.vikingName;
+    const rawPin = body.pin;
+
+    if (rawName == null || rawPin == null) {
+      return NextResponse.json({ error: "Name and PIN are required" }, { status: 400 });
+    }
+
+    const vikingName = String(rawName).trim().normalize("NFC");
+    const pin = String(rawPin).trim().replace(/\s/g, "");
 
     if (!vikingName || !pin) {
       return NextResponse.json({ error: "Name and PIN are required" }, { status: 400 });
     }
 
+    const nameLower = vikingName.toLowerCase().normalize("NFC");
     const [player] = await db
       .select()
       .from(players)
-      .where(sql`lower(${players.vikingName}) = ${vikingName.toLowerCase()}`)
+      .where(sql`lower(trim(${players.vikingName})) = ${nameLower}`)
       .limit(1);
 
     if (!player) {
-      return NextResponse.json({ error: "Warrior not found" }, { status: 401 });
+      return NextResponse.json({ error: "Warrior not found. Check your name (including spelling and special characters)." }, { status: 401 });
     }
 
     const valid = await verifyPin(pin, player.pinHash);
     if (!valid) {
-      return NextResponse.json({ error: "Invalid rune-code" }, { status: 401 });
+      return NextResponse.json({ error: "Invalid rune-code. Check your 4-digit PIN." }, { status: 401 });
     }
 
     const token = signToken({

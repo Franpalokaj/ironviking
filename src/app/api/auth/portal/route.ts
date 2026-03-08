@@ -35,7 +35,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
 
-    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+    const nameNormalized = String(vikingName).trim().normalize("NFC");
+    const pinNormalized = String(pin).trim().replace(/\s/g, "");
+    if (!nameNormalized) {
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    }
+    if (pinNormalized.length !== 4 || !/^\d{4}$/.test(pinNormalized)) {
       return NextResponse.json({ error: "PIN must be exactly 4 digits" }, { status: 400 });
     }
 
@@ -56,19 +61,19 @@ export async function POST(request: NextRequest) {
     const existing = await db
       .select()
       .from(players)
-      .where(eq(players.vikingName, vikingName))
+      .where(eq(players.vikingName, nameNormalized))
       .limit(1);
 
     if (existing.length > 0) {
       return NextResponse.json({ error: "Another warrior already bears this name. Choose another." }, { status: 409 });
     }
 
-    const pinHash = await hashPin(pin);
+    const pinHash = await hashPin(pinNormalized);
 
     const [player] = await db
       .insert(players)
       .values({
-        vikingName,
+        vikingName: nameNormalized,
         pinHash,
         isAdmin: false,
         sigil,

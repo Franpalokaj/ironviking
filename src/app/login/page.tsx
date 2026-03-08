@@ -1,14 +1,37 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+const LINK_ERRORS: Record<string, string> = {
+  missing: "No login link was provided.",
+  invalid_link: "This login link is invalid or has already been used.",
+  expired: "This login link has expired. Ask your chieftain for a new one.",
+  failed: "Something went wrong. Try again or log in with your name and rune-code.",
+};
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [vikingName, setVikingName] = useState("");
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const token = searchParams.get("token");
+  const linkError = searchParams.get("error");
+
+  useEffect(() => {
+    if (token) {
+      window.location.href = `/api/auth/login-link?token=${encodeURIComponent(token)}`;
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (linkError) {
+      setError(LINK_ERRORS[linkError] || "Login link failed.");
+    }
+  }, [linkError]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

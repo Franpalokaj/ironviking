@@ -31,6 +31,15 @@ export const inviteTokens = pgTable("invite_tokens", {
   usedByPlayer: integer("used_by_player").references(() => players.id),
 });
 
+export const loginLinks = pgTable("login_links", {
+  id: serial("id").primaryKey(),
+  token: text("token").unique().notNull(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const weeks = pgTable("weeks", {
   id: serial("id").primaryKey(),
   weekNumber: integer("week_number").unique().notNull(),

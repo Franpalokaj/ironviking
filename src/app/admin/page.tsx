@@ -76,6 +76,11 @@ export default function AdminPage() {
   const [editingPlayer, setEditingPlayer] = useState<number | null>(null);
   const [editSigil, setEditSigil] = useState("");
   const [editKmGoal, setEditKmGoal] = useState("");
+  const [editVikingName, setEditVikingName] = useState("");
+  const [resetPinPlayerId, setResetPinPlayerId] = useState<number | null>(null);
+  const [newPin, setNewPin] = useState("");
+  const [resetPinSaving, setResetPinSaving] = useState(false);
+  const [loginLinkCopying, setLoginLinkCopying] = useState<number | null>(null);
   const [questPlayerId, setQuestPlayerId] = useState<number | null>(null);
   const [playerQuests, setPlayerQuests] = useState<{ id: number; title: string; description: string; xpReward: number; completed: boolean }[]>([]);
   const [newQuestTitle, setNewQuestTitle] = useState("");
@@ -201,6 +206,7 @@ export default function AdminPage() {
     const updates: Record<string, unknown> = { playerId };
     if (editSigil) updates.sigil = editSigil;
     if (editKmGoal) updates.weeklyKmGoal = parseFloat(editKmGoal);
+    if (editVikingName.trim()) updates.vikingName = editVikingName.trim().normalize("NFC");
     const res = await fetch("/api/admin/players", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -210,6 +216,54 @@ export default function AdminPage() {
       setEditingPlayer(null);
       loadData();
       setMessage("Player updated.");
+    }
+  }
+
+  async function resetPinForPlayer(playerId: number) {
+    if (!newPin || newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+      setMessage("PIN must be exactly 4 digits.");
+      return;
+    }
+    setResetPinSaving(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/admin/reset-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId, newPin }),
+      });
+      const data = await res.json();
+      setMessage(data.message || data.error || "Done.");
+      if (res.ok) {
+        setResetPinPlayerId(null);
+        setNewPin("");
+      }
+    } finally {
+      setResetPinSaving(false);
+    }
+  }
+
+  async function getLoginLink(playerId: number) {
+    setLoginLinkCopying(playerId);
+    setMessage("");
+    try {
+      const res = await fetch("/api/admin/login-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data.error || "Failed to create link.");
+        return;
+      }
+      const url = `${typeof window !== "undefined" ? window.location.origin : ""}/login?token=${data.token}`;
+      await navigator.clipboard.writeText(url);
+      setMessage("Login link copied to clipboard. Send it to the warrior. Valid 24h.");
+    } catch {
+      setMessage("Failed to copy link.");
+    } finally {
+      setLoginLinkCopying(null);
     }
   }
 
@@ -478,7 +532,9 @@ export default function AdminPage() {
                         setEditingPlayer(p.id);
                         setEditSigil(p.sigil || "");
                         setEditKmGoal(p.weeklyKmGoal?.toString() || "");
+                        setEditVikingName(p.vikingName || "");
                         setQuestPlayerId(null);
+                        setResetPinPlayerId(null);
                       }}
                       className="text-xs text-fire hover:text-fire/80"
                     >Edit</button>
@@ -556,8 +612,53 @@ export default function AdminPage() {
                   </div>
                 )}
 
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => getLoginLink(p.id)}
+                    disabled={loginLinkCopying === p.id}
+                    className="text-xs text-ice hover:text-ice/80 disabled:opacity-50"
+                  >
+                    {loginLinkCopying === p.id ? "..." : "Get login link"}
+                  </button>
+                  <button
+                    onClick={() => setResetPinPlayerId(resetPinPlayerId === p.id ? null : p.id)}
+                    className="text-xs text-gold hover:text-gold/80"
+                  >
+                    {resetPinPlayerId === p.id ? "Cancel" : "Reset PIN"}
+                  </button>
+                </div>
+                {resetPinPlayerId === p.id && (
+                  <div className="mt-2 flex gap-2 items-center">
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={newPin}
+                      onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                      placeholder="New 4-digit PIN"
+                      className="w-28 bg-background border border-card-border rounded px-2 py-1 text-foreground text-xs"
+                    />
+                    <button
+                      onClick={() => resetPinForPlayer(p.id)}
+                      disabled={resetPinSaving || newPin.length !== 4}
+                      className="bg-gold text-background text-xs font-bold px-2 py-1 rounded disabled:opacity-50"
+                    >
+                      {resetPinSaving ? "..." : "Set PIN"}
+                    </button>
+                  </div>
+                )}
                 {editingPlayer === p.id && (
                   <div className="mt-3 space-y-2 border-t border-card-border pt-3">
+                    <div>
+                      <label className="text-xs text-muted block mb-1">Viking name</label>
+                      <input
+                        type="text"
+                        value={editVikingName}
+                        onChange={(e) => setEditVikingName(e.target.value)}
+                        className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground text-xs"
+                        placeholder="Name they use to log in"
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="text-xs text-muted block mb-1">Sigil</label>

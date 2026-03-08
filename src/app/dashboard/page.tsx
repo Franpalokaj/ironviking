@@ -86,6 +86,7 @@ export default function DashboardPage() {
   const [monthlyScores, setMonthlyScores] = useState<MonthlyScore[]>([]);
   const [alltimeScores, setAlltimeScores] = useState<MonthlyScore[]>([]);
   const [submittedIds, setSubmittedIds] = useState<number[]>([]);
+  const [currentWeekSubmittedIds, setCurrentWeekSubmittedIds] = useState<number[]>([]);
   const [shieldCounts, setShieldCounts] = useState<Record<number, number>>({});
   const [view, setView] = useState<LeaderboardView>("week");
   const [loading, setLoading] = useState(true);
@@ -130,6 +131,15 @@ export default function DashboardPage() {
         setScores(lbData.scores || []);
         setSubmittedIds(lbData.submittedPlayerIds || []);
         setShieldCounts(lbData.shieldCounts || {});
+
+        // Submission status for the running week (submit button + dots): use current week, not leaderboard week
+        if (weekData.week.id === leaderboardWeek.id) {
+          setCurrentWeekSubmittedIds(lbData.submittedPlayerIds || []);
+        } else {
+          const currentLbRes = await fetch(`/api/leaderboard?view=week&weekId=${weekData.week.id}`);
+          const currentLbData = await currentLbRes.json();
+          setCurrentWeekSubmittedIds(currentLbData.submittedPlayerIds || []);
+        }
 
         // Check if we should show the weekly reveal for the scored week
         const currentScores: WeeklyScore[] = lbData.scores || [];
@@ -226,7 +236,7 @@ export default function DashboardPage() {
 
   const phase = week ? getPhaseForWeek(week.weekNumber) : null;
   const kmTarget = week ? WEEKLY_KM_TARGETS[week.weekNumber] : null;
-  const hasSubmitted = session ? submittedIds.includes(session.playerId) : false;
+  const hasSubmitted = session ? currentWeekSubmittedIds.includes(session.playerId) : false;
 
   function renderLeaderboard() {
     if (view === "week") {
@@ -462,10 +472,10 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Submission status */}
+        {/* Submission status — who has submitted for the current running week */}
         <div className="flex justify-center gap-2 mb-6">
           {players.filter(p => p.onboardingComplete).map((p) => {
-            const submitted = submittedIds.includes(p.id);
+            const submitted = currentWeekSubmittedIds.includes(p.id);
             return (
               <div
                 key={p.id}

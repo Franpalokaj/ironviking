@@ -19,16 +19,19 @@ export async function POST(request: NextRequest) {
 
     const { vikingName, pin, sigil, conquests: selectedConquests } = await request.json();
 
-    if (!vikingName || !pin || !sigil) {
+    const nameNormalized = typeof vikingName === "string" ? vikingName.trim().normalize("NFC") : "";
+    const pinNormalized = String(pin ?? "").trim().replace(/\s/g, "");
+
+    if (!nameNormalized || !pinNormalized || !sigil) {
       return NextResponse.json({ error: "All fields required" }, { status: 400 });
     }
 
-    const pinHash = await hashPin(pin);
+    const pinHash = await hashPin(pinNormalized);
 
     const [player] = await db
       .insert(players)
       .values({
-        vikingName,
+        vikingName: nameNormalized,
         pinHash,
         isAdmin: true,
         sigil,
