@@ -81,6 +81,9 @@ export default function AdminPage() {
   const [newPin, setNewPin] = useState("");
   const [resetPinSaving, setResetPinSaving] = useState(false);
   const [loginLinkCopying, setLoginLinkCopying] = useState<number | null>(null);
+  const [addXpPlayerId, setAddXpPlayerId] = useState<number | null>(null);
+  const [addXpAmount, setAddXpAmount] = useState("");
+  const [addXpSaving, setAddXpSaving] = useState(false);
   const [questPlayerId, setQuestPlayerId] = useState<number | null>(null);
   const [playerQuests, setPlayerQuests] = useState<{ id: number; title: string; description: string; xpReward: number; completed: boolean }[]>([]);
   const [newQuestTitle, setNewQuestTitle] = useState("");
@@ -264,6 +267,32 @@ export default function AdminPage() {
       setMessage("Failed to copy link.");
     } finally {
       setLoginLinkCopying(null);
+    }
+  }
+
+  async function addXpForPlayer(playerId: number) {
+    const amount = parseInt(addXpAmount, 10);
+    if (!Number.isFinite(amount) || amount < 1) {
+      setMessage("Enter a positive XP amount.");
+      return;
+    }
+    setAddXpSaving(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/admin/add-xp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId, amount }),
+      });
+      const data = await res.json();
+      setMessage(data.message || data.error || "Done.");
+      if (res.ok) {
+        setAddXpPlayerId(null);
+        setAddXpAmount("");
+        loadData();
+      }
+    } finally {
+      setAddXpSaving(false);
     }
   }
 
@@ -535,6 +564,7 @@ export default function AdminPage() {
                         setEditVikingName(p.vikingName || "");
                         setQuestPlayerId(null);
                         setResetPinPlayerId(null);
+                        setAddXpPlayerId(null);
                       }}
                       className="text-xs text-fire hover:text-fire/80"
                     >Edit</button>
@@ -612,7 +642,7 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-2 mt-2 flex-wrap">
                   <button
                     onClick={() => getLoginLink(p.id)}
                     disabled={loginLinkCopying === p.id}
@@ -626,7 +656,32 @@ export default function AdminPage() {
                   >
                     {resetPinPlayerId === p.id ? "Cancel" : "Reset PIN"}
                   </button>
+                  <button
+                    onClick={() => setAddXpPlayerId(addXpPlayerId === p.id ? null : p.id)}
+                    className="text-xs text-fire hover:text-fire/80"
+                  >
+                    {addXpPlayerId === p.id ? "Cancel" : "Add XP"}
+                  </button>
                 </div>
+                {addXpPlayerId === p.id && (
+                  <div className="mt-2 flex gap-2 items-center">
+                    <input
+                      type="number"
+                      min={1}
+                      value={addXpAmount}
+                      onChange={(e) => setAddXpAmount(e.target.value.replace(/\D/g, ""))}
+                      placeholder="XP amount"
+                      className="w-24 bg-background border border-card-border rounded px-2 py-1 text-foreground text-xs"
+                    />
+                    <button
+                      onClick={() => addXpForPlayer(p.id)}
+                      disabled={addXpSaving || !addXpAmount}
+                      className="bg-fire text-background text-xs font-bold px-2 py-1 rounded disabled:opacity-50"
+                    >
+                      {addXpSaving ? "..." : "Add"}
+                    </button>
+                  </div>
+                )}
                 {resetPinPlayerId === p.id && (
                   <div className="mt-2 flex gap-2 items-center">
                     <input
