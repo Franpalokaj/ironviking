@@ -519,18 +519,23 @@ export default function SubmitPage() {
                   >Did Not Attempt</button>
                 </div>
 
-                {secondChallengeAttempted && (
+                {secondChallengeAttempted && (() => {
+                  const title = (secondChallenge.title || "").toLowerCase();
+                  const isGymCount = title.includes("gym");
+                  const autoCount = isGymCount ? gymSessions : runsCount;
+                  const autoLabel = isGymCount ? "gym session" : "run";
+                  return (
                   <div>
                     <label className="block text-xs text-muted mb-1">
                       Your result
                       {secondChallenge.dataType === "time_mmss" && " (mm:ss)"}
                       {secondChallenge.dataType === "distance_km" && " (km)"}
-                      {secondChallenge.dataType === "count" && " (runs — auto-filled from above)"}
+                      {secondChallenge.dataType === "count" && ` (${autoLabel}s — auto-filled from above)`}
                       {secondChallenge.dataType === "weight_kg" && " (kg)"}
                     </label>
                     {secondChallenge.dataType === "count" ? (
                       <div className="w-full bg-background border border-card-border rounded-lg px-4 py-3 text-muted text-sm">
-                        {runsCount} run{runsCount !== 1 ? "s" : ""} — taken from your runs count above
+                        {autoCount} {autoLabel}{autoCount !== 1 ? "s" : ""} — taken from above
                       </div>
                     ) : (
                       <input
@@ -543,7 +548,8 @@ export default function SubmitPage() {
                       />
                     )}
                   </div>
-                )}
+                  );
+                })()}
               </div>
             )}
 

@@ -128,9 +128,12 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
           if (sub.secondChallengeResult != null) {
             result = sub.secondChallengeResult;
           } else if (secondChallenge.dataType === "count") {
-            // "Most Runs Logged" and similar count challenges: fall back to runsCount
-            // so players who didn't duplicate their entry are still scored
-            result = sub.runsCount ?? null;
+            const title = (secondChallenge.title || "").toLowerCase();
+            if (title.includes("gym")) {
+              result = sub.gymSessions ?? null;
+            } else {
+              result = sub.runsCount ?? null;
+            }
           }
         }
         return { playerId: p.id, result, attempted };
