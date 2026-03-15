@@ -26,11 +26,11 @@ export async function POST(request: NextRequest) {
       ballSportSessions,
     } = body;
 
-    if (!weekId || kmRun === undefined || runsCount === undefined || gymSessions === undefined || !hypeVoteFor) {
+    if (!weekId || kmRun === undefined || runsCount === undefined || gymSessions === undefined) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    if (hypeVoteFor === session.playerId) {
+    if (hypeVoteFor && hypeVoteFor === session.playerId) {
       return NextResponse.json({ error: "You cannot vote for yourself" }, { status: 400 });
     }
 
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         soloChallengeDone: Boolean(soloChallengeDone),
         secondChallengeResult: secondChallengeResult != null ? Number(secondChallengeResult) : null,
         secondChallengeAttempted: secondChallengeAttempted !== false,
-        hypeVoteFor: Number(hypeVoteFor),
+        hypeVoteFor: hypeVoteFor ? Number(hypeVoteFor) : null,
         prTrialResult: prTrialResult != null ? Number(prTrialResult) : null,
         mtbKm: mtbKm != null ? Number(mtbKm) : null,
         hikingKm: hikingKm != null ? Number(hikingKm) : null,
@@ -78,11 +78,13 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    await db.insert(hypeVotes).values({
-      giverId: session.playerId,
-      receiverId: Number(hypeVoteFor),
-      weekId,
-    });
+    if (hypeVoteFor) {
+      await db.insert(hypeVotes).values({
+        giverId: session.playerId,
+        receiverId: Number(hypeVoteFor),
+        weekId,
+      });
+    }
 
     // Auto-score if all onboarded players have now submitted
     const allPlayers = await db.select().from(players).where(eq(players.onboardingComplete, true));

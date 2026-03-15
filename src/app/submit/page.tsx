@@ -128,7 +128,7 @@ export default function SubmitPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!week || !session || !hypeVoteFor) return;
+    if (!week || !session) return;
 
     setError("");
     setSubmitting(true);
@@ -605,7 +605,11 @@ export default function SubmitPage() {
               <button
                 key={p.id}
                 type="button"
-                onClick={() => { setHypeVoteFor(p.id); saveDraft({ hypeVoteFor: p.id }); }}
+                onClick={() => {
+                  const newVal = hypeVoteFor === p.id ? null : p.id;
+                  setHypeVoteFor(newVal);
+                  saveDraft({ hypeVoteFor: newVal });
+                }}
                 className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-all ${
                   hypeVoteFor === p.id
                     ? "border-fire bg-fire/10 scale-105"
@@ -618,7 +622,7 @@ export default function SubmitPage() {
             ))}
           </div>
           {!hypeVoteFor && (
-            <p className="text-xs text-red-400 mt-2">You must select one warrior.</p>
+            <p className="text-xs text-muted mt-2">Tap a warrior to give your shield — or withhold it this week.</p>
           )}
         </section>
 
@@ -631,7 +635,7 @@ export default function SubmitPage() {
 
         <button
           type="submit"
-          disabled={submitting || !hypeVoteFor || !kmRun}
+          disabled={submitting || !kmRun}
           className="w-full bg-fire text-background font-[family-name:var(--font-cinzel)] font-bold py-4 rounded-lg text-lg hover:bg-fire/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {submitting ? "Recording your deeds..." : "Submit My Week"}
