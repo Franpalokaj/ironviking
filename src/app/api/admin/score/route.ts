@@ -13,7 +13,10 @@ export async function POST(request: NextRequest) {
 
     const override = groupChallengeOverride === true ? true : groupChallengeOverride === false ? false : null;
     const result = await scoreWeek(weekId, !!force, override);
-    return NextResponse.json(result, { status: result.success ? 200 : 400 });
+    return NextResponse.json(
+      { ...result, message: result.detail ? `${result.message} ${result.detail}` : result.message },
+      { status: result.success ? 200 : 400 }
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed";
     if (message === "Unauthorized" || message === "Forbidden") {

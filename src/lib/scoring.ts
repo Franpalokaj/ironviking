@@ -33,7 +33,7 @@ import {
   getTitleForXP,
 } from "./constants";
 
-export async function scoreWeek(weekId: number, force = false, groupChallengeOverride?: boolean | null): Promise<{ success: boolean; message: string }> {
+export async function scoreWeek(weekId: number, force = false, groupChallengeOverride?: boolean | null): Promise<{ success: boolean; message: string; detail?: string }> {
   const [week] = await db.select().from(weeks).where(eq(weeks.id, weekId)).limit(1);
   if (!week) return { success: false, message: "Week not found" };
   if (week.isLocked && !force) return { success: false, message: "Week already locked — use rescore to override" };
@@ -196,6 +196,7 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
       }
     }
   }
+  const groupXpPerPlayer = Object.values(secondPtsMap).find(v => v > 0) ?? 0;
 
   // STEP 6: Streak bonus — consecutive weekly submissions
   const streakMap: Record<number, number> = {};
@@ -372,7 +373,18 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
   // STEP 15: Lock the week
   await db.update(weeks).set({ isLocked: true }).where(eq(weeks.id, weekId));
 
-  return { success: true, message: `Week ${week.weekNumber} scored and locked.` };
+  const groupLine = secondChallenge && week.type === "collaboration"
+    ? groupXpPerPlayer > 0
+      ? `Group challenge: PASSED (+${groupXpPerPlayer} XP each).`
+      : `Group challenge: FAILED (0 XP).`
+    : null;
+
+  const detail = [
+    `${allPlayers.filter(p => subsByPlayer[p.id]).length}/${allPlayers.length} players scored.`,
+    groupLine,
+  ].filter(Boolean).join(" ");
+
+  return { success: true, message: `Week ${week.weekNumber} scored and locked.`, detail };
 
   } catch (err) {
     // Roll back partial writes so the admin can safely re-run scoring

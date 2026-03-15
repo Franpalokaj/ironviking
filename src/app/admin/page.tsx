@@ -466,7 +466,11 @@ export default function AdminPage() {
 
       <div className="max-w-3xl mx-auto px-4 py-4">
         {message && (
-          <div className="bg-fire/10 border border-fire/30 rounded-lg p-3 mb-4 text-sm text-fire">
+          <div className={`rounded-lg p-3 mb-4 text-sm border ${
+            message.toLowerCase().includes("fail") || message.toLowerCase().includes("error") || message.toLowerCase().includes("failed")
+              ? "bg-red-500/10 border-red-500/30 text-red-400"
+              : "bg-green-500/10 border-green-500/30 text-green-400"
+          }`}>
             {message}
           </div>
         )}
