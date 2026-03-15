@@ -61,11 +61,15 @@ export async function GET(request: NextRequest) {
         weekNumber: weekMap[s.weekId]?.weekNumber ?? 0,
       }));
 
+      // Index scores by weekId so Quest Log can show whether group challenge actually passed
+      const scoreByWeek = Object.fromEntries(rawScores.map(s => [s.weekId, s]));
+
       const questLog = subs.map(sub => {
         const week = weekMap[sub.weekId];
         if (!week) return null;
         const solo = week.soloChallengeId ? challengeMap[week.soloChallengeId] : null;
         const second = week.secondChallengeId ? challengeMap[week.secondChallengeId] : null;
+        const score = scoreByWeek[sub.weekId];
         return {
           weekNumber: week.weekNumber,
           weekId: sub.weekId,
@@ -74,6 +78,8 @@ export async function GET(request: NextRequest) {
           secondChallenge: second ? { title: second.title, track: second.track, difficulty: second.difficulty } : null,
           secondAttempted: sub.secondChallengeAttempted,
           secondResult: sub.secondChallengeResult,
+          // Whether the player actually received XP for the group/competitive challenge
+          secondXpEarned: score ? score.secondChallengePoints > 0 : null,
         };
       }).filter(Boolean).sort((a, b) => (b?.weekNumber ?? 0) - (a?.weekNumber ?? 0));
 

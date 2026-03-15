@@ -75,6 +75,7 @@ interface QuestLogEntry {
   secondChallenge: { title: string; track: string; difficulty: string } | null;
   secondAttempted: boolean;
   secondResult: number | null;
+  secondXpEarned: boolean | null;
 }
 
 export default function ProfilePage() {
@@ -348,12 +349,19 @@ export default function ProfilePage() {
                     </div>
                   )}
                   {q.secondChallenge && (
-                    <div className="flex items-center gap-2 text-sm mt-1">
-                      <span className={q.secondAttempted && q.secondResult != null ? "text-green-400" : "text-red-400/60"}>
-                        {q.secondAttempted && q.secondResult != null ? "✓" : "✗"}
+                    <div className="flex items-start gap-2 text-sm mt-1">
+                      <span className={
+                        q.secondXpEarned === true ? "text-green-400" :
+                        q.secondXpEarned === false ? "text-red-400/60" :
+                        q.secondAttempted ? "text-yellow-500/70" : "text-red-400/60"
+                      }>
+                        {q.secondXpEarned === true ? "✓" : q.secondXpEarned === false ? "✗" : q.secondAttempted ? "~" : "✗"}
                       </span>
                       <span className={q.secondAttempted ? "text-foreground" : "text-muted"}>
                         {q.secondChallenge.track === "competitive" ? "⚔️" : "🛡️"} {q.secondChallenge.title}
+                        {q.secondXpEarned === false && q.secondAttempted && (
+                          <span className="text-xs text-muted ml-1">(group did not pass)</span>
+                        )}
                       </span>
                     </div>
                   )}
