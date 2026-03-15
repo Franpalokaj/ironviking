@@ -156,14 +156,24 @@ export async function scoreWeek(weekId: number, force = false): Promise<{ succes
   }
 
   if (secondChallenge && week.type === "collaboration") {
+    const allSubmitted = allPlayers.every((p) => subsByPlayer[p.id]);
     let groupMet = false;
 
-    if (secondChallenge.dataType === "boolean") {
-      const allContributed = allPlayers.every((p) => {
-        const sub = subsByPlayer[p.id];
-        return sub && sub.secondChallengeAttempted;
-      });
-      groupMet = allContributed;
+    if (!allSubmitted) {
+      groupMet = false;
+    } else if (secondChallenge.dataType === "boolean") {
+      const title = (secondChallenge.title || "").toLowerCase();
+      if ((title.includes("run") || title.includes("log a run")) && !title.includes("10k") && !title.includes("21k")) {
+        groupMet = allPlayers.every((p) => (subsByPlayer[p.id]?.runsCount ?? 0) >= 1);
+      } else if (title.includes("gym")) {
+        groupMet = allPlayers.every((p) => (subsByPlayer[p.id]?.gymSessions ?? 0) >= 1);
+      } else if (title.includes("submit") || title.includes("on time")) {
+        groupMet = weekSubs.every((s) => !s.isLate);
+      } else if (title.includes("10k") || title.includes("10 k")) {
+        groupMet = allPlayers.every((p) => (subsByPlayer[p.id]?.secondChallengeResult ?? 0) >= 10);
+      } else {
+        groupMet = allPlayers.every((p) => subsByPlayer[p.id]?.secondChallengeAttempted === true);
+      }
     } else if (secondChallenge.dataType === "distance_km" && secondChallenge.targetValue) {
       groupMet = totalGroupKm >= secondChallenge.targetValue;
     } else if (secondChallenge.targetValue) {

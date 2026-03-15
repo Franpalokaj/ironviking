@@ -90,6 +90,11 @@ export default function AdminPage() {
   const [newQuestDesc, setNewQuestDesc] = useState("");
   const [newQuestXp, setNewQuestXp] = useState("50");
   const [questSaving, setQuestSaving] = useState(false);
+  const [editingQuestId, setEditingQuestId] = useState<number | null>(null);
+  const [editQuestTitle, setEditQuestTitle] = useState("");
+  const [editQuestDesc, setEditQuestDesc] = useState("");
+  const [editQuestXp, setEditQuestXp] = useState("");
+  const [editQuestSaving, setEditQuestSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
@@ -310,6 +315,36 @@ export default function AdminPage() {
     setNewQuestTitle("");
     setNewQuestDesc("");
     setNewQuestXp("50");
+    setEditingQuestId(null);
+  }
+
+  function startEditQuest(q: { id: number; title: string; description: string; xpReward: number }) {
+    setEditingQuestId(q.id);
+    setEditQuestTitle(q.title);
+    setEditQuestDesc(q.description);
+    setEditQuestXp(String(q.xpReward));
+  }
+
+  async function saveEditQuest(conquestId: number, playerId: number) {
+    setEditQuestSaving(true);
+    try {
+      const res = await fetch("/api/conquests", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conquestId,
+          title: editQuestTitle.trim(),
+          description: editQuestDesc.trim(),
+          xpReward: Number(editQuestXp) || 50,
+        }),
+      });
+      if (res.ok) {
+        setEditingQuestId(null);
+        await loadQuestsForPlayer(playerId);
+      }
+    } finally {
+      setEditQuestSaving(false);
+    }
   }
 
   async function addQuest(playerId: number) {
@@ -583,24 +618,69 @@ export default function AdminPage() {
                         <div className="text-xs text-muted italic">No quests yet.</div>
                       )}
                       {playerQuests.map(q => (
-                        <div key={q.id} className={`flex items-start justify-between gap-2 rounded px-2 py-1.5 text-xs ${q.completed ? "opacity-40" : "bg-background border border-card-border"}`}>
-                          <div className="flex-1 min-w-0">
-                            <span className={`font-semibold ${q.completed ? "line-through text-muted" : "text-foreground"}`}>{q.title}</span>
-                            <span className="text-muted ml-1">· {q.xpReward} XP</span>
-                            <div className="text-muted text-[10px] truncate">{q.description}</div>
-                          </div>
-                          <div className="flex gap-1 flex-shrink-0">
-                            {!q.completed && (
-                              <button
-                                onClick={() => markQuestDone(q.id, p.id)}
-                                className="text-[10px] text-green-400 hover:text-green-300 border border-green-400/30 px-1.5 py-0.5 rounded"
-                              >✓ Done</button>
-                            )}
-                            <button
-                              onClick={() => deleteQuest(q.id, p.id)}
-                              className="text-[10px] text-red-400 hover:text-red-300 border border-red-400/30 px-1.5 py-0.5 rounded"
-                            >✕</button>
-                          </div>
+                        <div key={q.id} className={`rounded px-2 py-1.5 text-xs ${q.completed ? "opacity-40" : "bg-background border border-card-border"}`}>
+                          {editingQuestId === q.id ? (
+                            <div className="space-y-1.5">
+                              <input
+                                type="text"
+                                value={editQuestTitle}
+                                onChange={e => setEditQuestTitle(e.target.value)}
+                                placeholder="Title"
+                                className="w-full bg-background border border-card-border rounded px-2 py-1 text-xs text-foreground"
+                              />
+                              <input
+                                type="text"
+                                value={editQuestDesc}
+                                onChange={e => setEditQuestDesc(e.target.value)}
+                                placeholder="Description"
+                                className="w-full bg-background border border-card-border rounded px-2 py-1 text-xs text-foreground"
+                              />
+                              <div className="flex gap-2 items-center">
+                                <input
+                                  type="number"
+                                  value={editQuestXp}
+                                  onChange={e => setEditQuestXp(e.target.value)}
+                                  min={5}
+                                  max={500}
+                                  className="w-16 bg-background border border-card-border rounded px-2 py-1 text-xs text-foreground"
+                                />
+                                <span className="text-muted text-[10px]">XP</span>
+                                <button
+                                  onClick={() => saveEditQuest(q.id, p.id)}
+                                  disabled={editQuestSaving || !editQuestTitle.trim()}
+                                  className="text-[10px] bg-ice/20 text-ice px-2 py-0.5 rounded hover:bg-ice/30 disabled:opacity-40"
+                                >{editQuestSaving ? "…" : "Save"}</button>
+                                <button
+                                  onClick={() => setEditingQuestId(null)}
+                                  className="text-[10px] text-muted hover:text-foreground"
+                                >Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <span className={`font-semibold ${q.completed ? "line-through text-muted" : "text-foreground"}`}>{q.title}</span>
+                                <span className="text-muted ml-1">· {q.xpReward} XP</span>
+                                <div className="text-muted text-[10px] truncate">{q.description}</div>
+                              </div>
+                              <div className="flex gap-1 flex-shrink-0">
+                                <button
+                                  onClick={() => startEditQuest(q)}
+                                  className="text-[10px] text-ice hover:text-ice/80 border border-ice/30 px-1.5 py-0.5 rounded"
+                                >Edit</button>
+                                {!q.completed && (
+                                  <button
+                                    onClick={() => markQuestDone(q.id, p.id)}
+                                    className="text-[10px] text-green-400 hover:text-green-300 border border-green-400/30 px-1.5 py-0.5 rounded"
+                                  >✓ Done</button>
+                                )}
+                                <button
+                                  onClick={() => deleteQuest(q.id, p.id)}
+                                  className="text-[10px] text-red-400 hover:text-red-300 border border-red-400/30 px-1.5 py-0.5 rounded"
+                                >✕</button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

@@ -115,6 +115,51 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+// Update a conquest (title, description, xpReward) — admin only
+export async function PUT(request: NextRequest) {
+  try {
+    await requireAdmin();
+    const body = await request.json();
+    const { conquestId, title, description, xpReward } = body;
+
+    if (!conquestId) {
+      return NextResponse.json({ error: "conquestId required" }, { status: 400 });
+    }
+
+    const [existing] = await db
+      .select()
+      .from(conquests)
+      .where(eq(conquests.id, conquestId))
+      .limit(1);
+
+    if (!existing) {
+      return NextResponse.json({ error: "Conquest not found" }, { status: 404 });
+    }
+
+    const updates: { title?: string; description?: string; xpReward?: number } = {};
+    if (typeof title === "string" && title.trim()) updates.title = title.trim();
+    if (typeof description === "string") updates.description = description.trim();
+    if (typeof xpReward === "number" && xpReward >= 0) updates.xpReward = xpReward;
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(existing);
+    }
+
+    const [updated] = await db
+      .update(conquests)
+      .set(updates)
+      .where(eq(conquests.id, conquestId))
+      .returning();
+
+    return NextResponse.json(updated);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed";
+    if (message === "Unauthorized") return NextResponse.json({ error: message }, { status: 401 });
+    if (message === "Forbidden") return NextResponse.json({ error: message }, { status: 403 });
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 // Delete a conquest — admin only
 export async function DELETE(request: NextRequest) {
   try {
