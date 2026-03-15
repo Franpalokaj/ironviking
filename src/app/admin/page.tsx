@@ -150,12 +150,12 @@ export default function AdminPage() {
     }
   }
 
-  async function scoreWeek(weekId: number, force = false) {
+  async function scoreWeek(weekId: number, force = false, groupChallengeOverride?: boolean | null) {
     setMessage("");
     const res = await fetch("/api/admin/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weekId, force }),
+      body: JSON.stringify({ weekId, force, groupChallengeOverride: groupChallengeOverride ?? undefined }),
     });
     const data = await res.json();
     setMessage(data.message || data.error);
@@ -502,12 +502,28 @@ export default function AdminPage() {
                         {w.type === "competition" ? "⚔️" : "🛡️"} {w.startDate} — {w.endDate}
                       </span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
                       {w.isLocked ? (
-                        <button
-                          onClick={() => scoreWeek(w.id, true)}
-                          className="text-xs bg-gold/20 text-gold px-3 py-1 rounded hover:bg-gold/30"
-                        >Rescore</button>
+                        <>
+                          <button
+                            onClick={() => scoreWeek(w.id, true)}
+                            className="text-xs bg-gold/20 text-gold px-3 py-1 rounded hover:bg-gold/30"
+                          >Rescore</button>
+                          {w.type === "collaboration" && w.secondChallengeId && (
+                            <>
+                              <button
+                                onClick={() => scoreWeek(w.id, true, false)}
+                                className="text-xs bg-red-500/20 text-red-400 px-3 py-1 rounded hover:bg-red-500/30"
+                                title="Rescore with group challenge forced to FAIL"
+                              >Rescore (Group Fail)</button>
+                              <button
+                                onClick={() => scoreWeek(w.id, true, true)}
+                                className="text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded hover:bg-green-500/30"
+                                title="Rescore with group challenge forced to PASS"
+                              >Rescore (Group Pass)</button>
+                            </>
+                          )}
+                        </>
                       ) : (
                         <button
                           onClick={() => scoreWeek(w.id)}

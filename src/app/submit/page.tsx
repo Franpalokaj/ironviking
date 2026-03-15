@@ -48,7 +48,7 @@ export default function SubmitPage() {
   const [gymSessions, setGymSessions] = useState(0);
   const [soloChallengeDone, setSoloChallengeDone] = useState(false);
   const [secondChallengeResult, setSecondChallengeResult] = useState("");
-  const [secondChallengeAttempted, setSecondChallengeAttempted] = useState(true);
+  const [secondChallengeAttempted, setSecondChallengeAttempted] = useState(false);
   const [hypeVoteFor, setHypeVoteFor] = useState<number | null>(null);
   const [draftSaved, setDraftSaved] = useState(false);
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

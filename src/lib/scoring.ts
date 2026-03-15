@@ -33,7 +33,7 @@ import {
   getTitleForXP,
 } from "./constants";
 
-export async function scoreWeek(weekId: number, force = false): Promise<{ success: boolean; message: string }> {
+export async function scoreWeek(weekId: number, force = false, groupChallengeOverride?: boolean | null): Promise<{ success: boolean; message: string }> {
   const [week] = await db.select().from(weeks).where(eq(weeks.id, weekId)).limit(1);
   if (!week) return { success: false, message: "Week not found" };
   if (week.isLocked && !force) return { success: false, message: "Week already locked — use rescore to override" };
@@ -159,7 +159,11 @@ export async function scoreWeek(weekId: number, force = false): Promise<{ succes
     const allSubmitted = allPlayers.every((p) => subsByPlayer[p.id]);
     let groupMet = false;
 
-    if (!allSubmitted) {
+    if (groupChallengeOverride === true) {
+      groupMet = true;
+    } else if (groupChallengeOverride === false) {
+      groupMet = false;
+    } else if (!allSubmitted) {
       groupMet = false;
     } else if (secondChallenge.dataType === "boolean") {
       const title = (secondChallenge.title || "").toLowerCase();

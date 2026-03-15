@@ -74,7 +74,7 @@ export const submissions = pgTable("submissions", {
   gymSessions: integer("gym_sessions").notNull(),
   soloChallengeDone: boolean("solo_challenge_done").notNull(),
   secondChallengeResult: real("second_challenge_result"),
-  secondChallengeAttempted: boolean("second_challenge_attempted").default(true).notNull(),
+  secondChallengeAttempted: boolean("second_challenge_attempted").default(false).notNull(),
   hypeVoteFor: integer("hype_vote_for").references(() => players.id).notNull(),
   prTrialResult: real("pr_trial_result"),
   mtbKm: real("mtb_km"),

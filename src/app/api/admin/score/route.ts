@@ -5,13 +5,14 @@ import { scoreWeek } from "@/lib/scoring";
 export async function POST(request: NextRequest) {
   try {
     await requireAdmin();
-    const { weekId, force } = await request.json();
+    const { weekId, force, groupChallengeOverride } = await request.json();
 
     if (!weekId) {
       return NextResponse.json({ error: "weekId is required" }, { status: 400 });
     }
 
-    const result = await scoreWeek(weekId, !!force);
+    const override = groupChallengeOverride === true ? true : groupChallengeOverride === false ? false : null;
+    const result = await scoreWeek(weekId, !!force, override);
     return NextResponse.json(result, { status: result.success ? 200 : 400 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed";
