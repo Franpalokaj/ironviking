@@ -95,6 +95,10 @@ export default function AdminPage() {
   const [editQuestDesc, setEditQuestDesc] = useState("");
   const [editQuestXp, setEditQuestXp] = useState("");
   const [editQuestSaving, setEditQuestSaving] = useState(false);
+  const [editingChallengeId, setEditingChallengeId] = useState<number | null>(null);
+  const [editChallengeTitle, setEditChallengeTitle] = useState("");
+  const [editChallengeDesc, setEditChallengeDesc] = useState("");
+  const [editChallengeSaving, setEditChallengeSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
@@ -169,6 +173,33 @@ export default function AdminPage() {
       body: JSON.stringify({ weekId, [field]: challengeId }),
     });
     loadData();
+  }
+
+  function startEditChallenge(c: { id: number; title: string; description: string }) {
+    setEditingChallengeId(c.id);
+    setEditChallengeTitle(c.title);
+    setEditChallengeDesc(c.description);
+  }
+
+  async function saveChallengeEdit(challengeId: number) {
+    setEditChallengeSaving(true);
+    try {
+      const res = await fetch("/api/challenges", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeId,
+          title: editChallengeTitle.trim(),
+          description: editChallengeDesc.trim(),
+        }),
+      });
+      if (res.ok) {
+        setEditingChallengeId(null);
+        await loadData();
+      }
+    } finally {
+      setEditChallengeSaving(false);
+    }
   }
 
   async function loadSubmissions(weekId: number) {
@@ -865,9 +896,45 @@ export default function AdminPage() {
                 <h3 className="font-[family-name:var(--font-cinzel)] font-bold text-sm text-fire mb-2 capitalize">{track}</h3>
                 {challenges.filter(c => c.track === track).map(c => (
                   <div key={c.id} className="bg-card border border-card-border rounded p-3 mb-2 text-xs">
-                    <div className="font-semibold text-foreground">{c.title}</div>
-                    <div className="text-muted">{c.description}</div>
-                    <div className="text-muted mt-1">Phase: {c.phase} · Type: {c.dataType || "boolean"} {c.targetValue ? `· Target: ${c.targetValue}` : ""} · <span className={c.difficulty === "epic" ? "text-gold" : c.difficulty === "hard" ? "text-fire" : "text-stone"}>{(c.difficulty || "normal").toUpperCase()}</span></div>
+                    {editingChallengeId === c.id ? (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={editChallengeTitle}
+                          onChange={e => setEditChallengeTitle(e.target.value)}
+                          placeholder="Title"
+                          className="w-full bg-background border border-card-border rounded px-2 py-1.5 text-foreground text-sm"
+                        />
+                        <textarea
+                          value={editChallengeDesc}
+                          onChange={e => setEditChallengeDesc(e.target.value)}
+                          placeholder="Description"
+                          rows={3}
+                          className="w-full bg-background border border-card-border rounded px-2 py-1.5 text-foreground text-sm resize-y"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveChallengeEdit(c.id)}
+                            disabled={editChallengeSaving || !editChallengeTitle.trim()}
+                            className="text-xs bg-ice/20 text-ice px-3 py-1 rounded hover:bg-ice/30 disabled:opacity-40"
+                          >{editChallengeSaving ? "Saving…" : "Save"}</button>
+                          <button
+                            onClick={() => setEditingChallengeId(null)}
+                            className="text-xs text-muted hover:text-foreground"
+                          >Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="font-semibold text-foreground">{c.title}</div>
+                        <div className="text-muted">{c.description}</div>
+                        <div className="text-muted mt-1">Phase: {c.phase} · Type: {c.dataType || "boolean"} {c.targetValue ? `· Target: ${c.targetValue}` : ""} · <span className={c.difficulty === "epic" ? "text-gold" : c.difficulty === "hard" ? "text-fire" : "text-stone"}>{(c.difficulty || "normal").toUpperCase()}</span></div>
+                        <button
+                          onClick={() => startEditChallenge(c)}
+                          className="mt-2 text-[10px] text-ice hover:text-ice/80 border border-ice/30 px-2 py-0.5 rounded"
+                        >Edit</button>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
