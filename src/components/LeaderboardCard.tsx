@@ -54,7 +54,9 @@ export default function LeaderboardCard({
 
   return (
     <div
-      className={`relative bg-card border ${borderColor} rounded-lg p-4 ${glow} transition-all duration-300`}
+      className={`relative bg-card border rounded-lg p-4 transition-all duration-300 ${
+        isBerserker ? "border-fire/50 berserker-card-glow" : `${borderColor} ${glow}`
+      }`}
     >
       <div className="flex items-start gap-3">
         <div className="text-3xl flex-shrink-0">{sigilEmoji}</div>
@@ -63,13 +65,20 @@ export default function LeaderboardCard({
             <h3 className="font-[family-name:var(--font-cinzel)] font-bold text-foreground truncate">
               {vikingName}
             </h3>
+            {isBerserker && (
+              <span
+                title="Last twice in a row — +50% XP this week"
+                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-fire/20 text-fire border border-fire/40"
+              >
+                Berserker
+              </span>
+            )}
             {!hasSubmitted && <span title="Awaiting submission">🔥</span>}
             {shieldCount > 0 && (
               <span title={`${shieldCount} shield${shieldCount > 1 ? "s" : ""} received`}>
                 {"🛡️".repeat(Math.min(shieldCount, 3))}
               </span>
             )}
-            {isBerserker && <span title="Berserker Mode" className="text-lg">🔥</span>}
             {isSkald && <span title="Skald of the Month" className="text-lg">📜</span>}
           </div>
           <div className={`text-sm ${titleStyle.color} font-[family-name:var(--font-cinzel)] ${titleStyle.glowClass || ""}`}>

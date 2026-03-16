@@ -19,14 +19,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unknown benchmark skill" }, { status: 400 });
     }
 
-    // Get current baseline to calculate XP
+    // Require a recorded baseline before setting a goal
     const [baseline] = await db
       .select()
       .from(baselines)
       .where(and(eq(baselines.playerId, session.playerId), eq(baselines.skill, skill)))
       .limit(1);
 
-    const currentValue = baseline?.value ?? def.baseline;
+    if (!baseline) {
+      return NextResponse.json(
+        { error: "Record a baseline for this skill first (use Record / Update)" },
+        { status: 400 }
+      );
+    }
+
+    const currentValue = baseline.value;
     const xpReward = calculateBenchmarkXP(skill, Number(goalValue), currentValue);
 
     // Upsert: one goal per player per skill

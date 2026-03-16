@@ -519,7 +519,7 @@ export default function ProfilePage() {
                       </button>
                     )}
 
-                    {!goal && settingGoalSkill === def.skill ? (
+                    {!goal && settingGoalSkill === def.skill && current !== null ? (
                       <div className="flex items-center gap-2 flex-1">
                         <input
                           type="number"
@@ -532,7 +532,7 @@ export default function ProfilePage() {
                         />
                         {goalValue && (
                           <span className="text-xs text-gold font-bold">
-                            {calculateBenchmarkXP(def.skill, parseFloat(goalValue), current ?? def.baseline)} XP
+                            {calculateBenchmarkXP(def.skill, parseFloat(goalValue), current)} XP
                           </span>
                         )}
                         <button
@@ -542,7 +542,7 @@ export default function ProfilePage() {
                         >Set</button>
                         <button onClick={() => setSettingGoalSkill(null)} className="text-xs text-muted">✕</button>
                       </div>
-                    ) : !goal && recordingSkill !== def.skill && (
+                    ) : !goal && current !== null && recordingSkill !== def.skill && (
                       <button
                         onClick={() => { setSettingGoalSkill(def.skill); setGoalValue(""); }}
                         className="text-xs text-gold hover:text-gold/80 border border-gold/30 rounded px-2 py-0.5"
