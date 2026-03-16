@@ -97,6 +97,7 @@ export default function DashboardPage() {
   const [showAltReveal, setShowAltReveal] = useState(false);
   const [scoredWeekId, setScoredWeekId] = useState<number | null>(null);
   const [scoredWeekNumber, setScoredWeekNumber] = useState<number | null>(null);
+  const [berserkerIds, setBerserkerIds] = useState<number[]>([]);
 
   const loadData = useCallback(async () => {
     try {
@@ -120,6 +121,7 @@ export default function DashboardPage() {
       setSoloChallenge(weekData.soloChallenge);
       setSecondChallenge(weekData.secondChallenge);
       setPlayers(playersData.players || []);
+      setBerserkerIds(weekData.berserkerPlayerIds || []);
 
       if (weekData.week) {
         // Use the most recently scored week for the leaderboard, falling back to current
@@ -256,7 +258,7 @@ export default function DashboardPage() {
                     xp={0}
                     hasSubmitted={submittedIds.includes(p.id)}
                     shieldCount={shieldCounts[p.id] || 0}
-                    isBerserker={false}
+                    isBerserker={berserkerIds.includes(p.id)}
                     isSkald={false}
                   />
                 </div>
@@ -289,7 +291,7 @@ export default function DashboardPage() {
                   xp={score.xpTotalAfter}
                   hasSubmitted={submittedIds.includes(score.playerId)}
                   shieldCount={shieldCounts[score.playerId] || 0}
-                  isBerserker={score.berserkerMultiplier > 1}
+                  isBerserker={score.berserkerMultiplier > 1 || berserkerIds.includes(score.playerId)}
                   isSkald={false}
                 />
               </div>

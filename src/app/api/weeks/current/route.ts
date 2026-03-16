@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { weeks, challenges } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { weeks, challenges, weeklyScores, players } from "@/db/schema";
+import { eq, desc, and, sql } from "drizzle-orm";
+import { BERSERKER_MULTIPLIER } from "@/lib/constants";
 import { getCurrentWeekNumber } from "@/lib/constants";
 
 export async function GET() {
@@ -49,12 +50,41 @@ export async function GET() {
       if (pw) prevWeekId = pw.id;
     }
 
+    // Compute which players are in berserker mode for the CURRENT week
+    // (last in both of the two most recent scored weeks)
+    const berserkerPlayerIds: number[] = [];
+    if (week.weekNumber >= 3 && lastScoredWeek && lastScoredWeek.weekNumber >= 2) {
+      const allPlayers = await db
+        .select({ id: players.id })
+        .from(players)
+        .where(eq(players.onboardingComplete, true));
+
+      for (const p of allPlayers) {
+        const prevScores = await db
+          .select({ realmRankWeek: weeklyScores.realmRankWeek })
+          .from(weeklyScores)
+          .innerJoin(weeks, eq(weeklyScores.weekId, weeks.id))
+          .where(and(
+            eq(weeklyScores.playerId, p.id),
+            sql`${weeks.weekNumber} >= ${week.weekNumber - 2}`,
+            sql`${weeks.weekNumber} < ${week.weekNumber}`
+          ))
+          .orderBy(desc(weeks.weekNumber))
+          .limit(2);
+
+        if (prevScores.length === 2 && prevScores.every(s => s.realmRankWeek === 6)) {
+          berserkerPlayerIds.push(p.id);
+        }
+      }
+    }
+
     return NextResponse.json({
       week,
       soloChallenge,
       secondChallenge,
       prevWeekId,
       lastScoredWeek: lastScoredWeek || null,
+      berserkerPlayerIds,
     });
   } catch {
     return NextResponse.json({ error: "Failed to load week" }, { status: 500 });
