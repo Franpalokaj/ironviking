@@ -58,6 +58,12 @@ export default function LeaderboardCard({
         isBerserker ? "border-fire/50 berserker-card-glow" : `${borderColor} ${glow}`
       }`}
     >
+      {isBerserker && (
+        <>
+          <span className="berserker-ember-2" />
+          <span className="berserker-ember-3" />
+        </>
+      )}
       <div className="flex items-start gap-3">
         <div className="text-3xl flex-shrink-0">{sigilEmoji}</div>
         <div className="flex-1 min-w-0">
