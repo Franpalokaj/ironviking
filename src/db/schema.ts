@@ -153,6 +153,8 @@ export const weeklyScores = pgTable("weekly_scores", {
   ontimeBonus: integer("ontime_bonus").notNull(),
   firstSubmissionBonus: integer("first_submission_bonus").default(0).notNull(),
   forgeBonus: integer("forge_bonus").default(0).notNull(),
+  runBonus: integer("run_bonus").default(0).notNull(),
+  gymBonus: integer("gym_bonus").default(0).notNull(),
   berserkerMultiplier: real("berserker_multiplier").notNull(),
   totalRaw: real("total_raw").notNull(),
   totalFinal: real("total_final").notNull(),

@@ -23,9 +23,9 @@ import {
   STREAK_BONUS_PER_WEEK,
   STREAK_BONUS_CAP,
   BERSERKER_MULTIPLIER,
-  KM_POOL_BASE,
   KM_XP_RATE,
-  GYM_KM_EQUIVALENT,
+  RUN_BONUS,
+  GYM_BONUS,
   DIFFICULTY_POINTS,
   CONSOLIDATION_WEEKS,
   BACKOFF_WEEK,
@@ -55,22 +55,27 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
     subsByPlayer[sub.playerId] = sub;
   }
 
-  // STEP 2: Dynamic km pool — scales with total group effort (running + gym)
+  // STEP 2: Dynamic km pool — scales with total group km run (gym is flat, not in pool)
   const totalGroupKm = weekSubs.reduce((sum, s) => sum + s.kmRun, 0);
-  const totalGroupKmEq = weekSubs.reduce(
-    (sum, s) => sum + s.kmRun + s.gymSessions * GYM_KM_EQUIVALENT, 0
-  );
-  const dynamicPool = KM_POOL_BASE + totalGroupKmEq * KM_XP_RATE;
+  const dynamicPool = totalGroupKm * KM_XP_RATE;
 
   const kmPointsMap: Record<number, number> = {};
   for (const p of allPlayers) {
     const sub = subsByPlayer[p.id];
-    if (!sub || totalGroupKmEq === 0) {
+    if (!sub || totalGroupKm === 0) {
       kmPointsMap[p.id] = 0;
     } else {
-      const playerKmEq = sub.kmRun + sub.gymSessions * GYM_KM_EQUIVALENT;
-      kmPointsMap[p.id] = Math.round((playerKmEq / totalGroupKmEq) * dynamicPool * 10) / 10;
+      kmPointsMap[p.id] = Math.round((sub.kmRun / totalGroupKm) * dynamicPool * 10) / 10;
     }
+  }
+
+  // STEP 2b: Flat activity bonuses — +10 per run, +10 per gym session
+  const runBonusMap: Record<number, number> = {};
+  const gymBonusMap: Record<number, number> = {};
+  for (const p of allPlayers) {
+    const sub = subsByPlayer[p.id];
+    runBonusMap[p.id] = sub ? sub.runsCount * RUN_BONUS : 0;
+    gymBonusMap[p.id] = sub ? sub.gymSessions * GYM_BONUS : 0;
   }
 
   // STEP 3: Weekly realm ranks (by km, tiebreak by runs then gym)
@@ -314,6 +319,8 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
 
     const totalRaw =
       kmPointsMap[p.id] +
+      runBonusMap[p.id] +
+      gymBonusMap[p.id] +
       rankBonusMap[p.id] +
       soloPtsMap[p.id] +
       secondPtsMap[p.id] +
@@ -328,6 +335,8 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
     // First-submission bonus is applied flat outside the multiplier so it always guarantees level-up
     const rawWithoutFirst =
       kmPointsMap[p.id] +
+      runBonusMap[p.id] +
+      gymBonusMap[p.id] +
       rankBonusMap[p.id] +
       soloPtsMap[p.id] +
       secondPtsMap[p.id] +
@@ -374,6 +383,8 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
       ontimeBonus: ontimeMap[p.id],
       firstSubmissionBonus: firstBonus,
       forgeBonus: forgeMap[p.id],
+      runBonus: runBonusMap[p.id],
+      gymBonus: gymBonusMap[p.id],
       berserkerMultiplier: berserkerMap[p.id],
       totalRaw: Math.round(totalRaw * 10) / 10,
       totalFinal,

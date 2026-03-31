@@ -111,10 +111,10 @@ export const SKALD_BONUS = 10;
 export const STREAK_BONUS_PER_WEEK = 5;
 export const STREAK_BONUS_CAP = 50;
 export const BERSERKER_MULTIPLIER = 1.5;
-export const KM_POINTS_POOL = 60; // legacy fixed pool (no longer used in scoring)
-export const KM_POOL_BASE = 30;      // minimum XP pool floor regardless of distance
-export const KM_XP_RATE = 0.5;       // additional XP per group km-equivalent
-export const GYM_KM_EQUIVALENT = 2.5; // each gym session = 2.5 km-equivalent in the pool
+export const KM_POINTS_POOL = 60; // legacy (no longer used)
+export const KM_XP_RATE = 1.25;      // XP per group km run (pool = totalGroupKm × 1.25)
+export const RUN_BONUS = 10;          // flat XP per run logged (no cap)
+export const GYM_BONUS = 10;          // flat XP per gym session logged (no cap)
 
 export const SIGILS = [
   "wolf", "raven", "bear", "serpent", "dragon",

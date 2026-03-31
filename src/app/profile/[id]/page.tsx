@@ -36,6 +36,8 @@ interface Score {
   ontimeBonus: number;
   firstSubmissionBonus: number;
   forgeBonus: number;
+  runBonus: number;
+  gymBonus: number;
   berserkerMultiplier: number;
   totalRaw: number;
   totalFinal: number;
@@ -578,13 +580,16 @@ export default function ProfilePage() {
                   const sub = submissions.find(sub => sub.weekId === s.weekId);
                   const lines: { label: string; value: number }[] = [];
 
+                  if (s.runBonus > 0) {
+                    const runCount = sub ? sub.runsCount : Math.round(s.runBonus / 10);
+                    lines.push({ label: `${runCount} run${runCount !== 1 ? "s" : ""}`, value: s.runBonus });
+                  }
+                  if (s.gymBonus > 0) {
+                    const gymCount = sub ? sub.gymSessions : Math.round(s.gymBonus / 10);
+                    lines.push({ label: `${gymCount} gym session${gymCount !== 1 ? "s" : ""}`, value: s.gymBonus });
+                  }
                   if (s.kmPoints > 0) {
-                    let kmLabel = sub ? `${Math.round(sub.kmRun * 10) / 10} km` : "km";
-                    if (sub && sub.gymSessions > 0 && sub.kmRun === 0) {
-                      kmLabel = `${sub.gymSessions} gym session${sub.gymSessions > 1 ? "s" : ""}`;
-                    } else if (sub && sub.gymSessions > 0) {
-                      kmLabel = `${Math.round(sub.kmRun * 10) / 10} km + ${sub.gymSessions} gym`;
-                    }
+                    const kmLabel = sub ? `${Math.round(sub.kmRun * 10) / 10} km` : "km";
                     lines.push({ label: kmLabel, value: Math.round(s.kmPoints * 10) / 10 });
                   }
                   if (s.rankBonus > 0) lines.push({ label: `Rank #${s.realmRankWeek}`, value: s.rankBonus });
@@ -592,7 +597,6 @@ export default function ProfilePage() {
                   if (s.secondChallengePoints > 0) lines.push({ label: "Group/comp challenge", value: s.secondChallengePoints });
                   if (s.streakBonus > 0) lines.push({ label: "Streak", value: s.streakBonus });
                   if (s.shieldPoints > 0) lines.push({ label: "Shield", value: Math.round(s.shieldPoints * 10) / 10 });
-                  if (s.forgeBonus > 0) lines.push({ label: "Workout XP", value: s.forgeBonus });
                   if (s.prBonus > 0) lines.push({ label: "PR trial", value: s.prBonus });
                   if (s.ontimeBonus > 0) lines.push({ label: "On-time", value: s.ontimeBonus });
                   if (s.firstSubmissionBonus > 0) lines.push({ label: "First submission", value: s.firstSubmissionBonus });
