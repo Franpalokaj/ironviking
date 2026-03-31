@@ -154,6 +154,36 @@ export default function AdminPage() {
     }
   }
 
+  async function deleteInvite(id: number) {
+    if (!confirm("Delete this invite link? It cannot be un-done.")) return;
+    const res = await fetch("/api/admin/invites", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) {
+      setInvites((prev) => prev.filter((i) => i.id !== id));
+      setMessage("Invite deleted.");
+    } else {
+      setMessage("Failed to delete invite.");
+    }
+  }
+
+  async function refreshInvite(id: number) {
+    const res = await fetch("/api/admin/invites", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setInvites((prev) => prev.map((i) => (i.id === id ? data.invite : i)));
+      setMessage("Invite refreshed — valid for another 30 days.");
+    } else {
+      setMessage("Failed to refresh invite.");
+    }
+  }
+
   async function scoreWeek(weekId: number, force = false, groupChallengeOverride?: boolean | null) {
     setMessage("");
     const res = await fetch("/api/admin/score", {
@@ -970,19 +1000,40 @@ export default function AdminPage() {
               {players.length} / 10 player slots used · {invites.filter(i => !i.usedAt).length} pending invite(s)
             </div>
             <div className="space-y-2">
-              {invites.map(inv => (
-                <div key={inv.id} className="bg-card border border-card-border rounded-lg p-3 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold">Slot {inv.playerSlot}</span>
-                    <span className={inv.usedAt ? "text-green-400" : "text-yellow-400"}>
-                      {inv.usedAt ? "✓ Used" : "Pending"}
-                    </span>
+              {invites.map(inv => {
+                const isExpired = !inv.usedAt && new Date() > new Date(inv.expiresAt);
+                return (
+                  <div key={inv.id} className="bg-card border border-card-border rounded-lg p-3 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold">Slot {inv.playerSlot}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={inv.usedAt ? "text-green-400" : isExpired ? "text-red-400" : "text-yellow-400"}>
+                          {inv.usedAt ? "✓ Used" : isExpired ? "Expired" : "Pending"}
+                        </span>
+                        {!inv.usedAt && (
+                          <>
+                            <button
+                              onClick={() => refreshInvite(inv.id)}
+                              className="text-[10px] bg-gold/20 text-gold px-2 py-0.5 rounded hover:bg-gold/30"
+                              title="Generate a new token for this slot (resets 30-day expiry)"
+                            >Refresh</button>
+                            <button
+                              onClick={() => deleteInvite(inv.id)}
+                              className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded hover:bg-red-500/30"
+                              title="Delete this invite slot"
+                            >Delete</button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {!inv.usedAt && (
+                      <div className="mt-1 bg-background border border-card-border rounded px-2 py-1 font-mono text-[10px] break-all select-all">
+                        {baseUrl}/portal?rune={inv.token}
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-1 bg-background border border-card-border rounded px-2 py-1 font-mono text-[10px] break-all select-all">
-                    {baseUrl}/portal?rune={inv.token}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
