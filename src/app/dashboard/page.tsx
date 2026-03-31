@@ -463,13 +463,6 @@ export default function DashboardPage() {
             <div className="text-xs text-muted mt-1">
               {week.type === "competition" ? "⚔️ Competition Week" : "🛡️ Collaboration Week"}
             </div>
-            <button
-              onClick={() => router.push("/guide")}
-              className="text-xs text-muted hover:text-fire underline underline-offset-2 mt-1 transition-colors"
-            >
-              View full training schedule →
-            </button>
-
             {/* Hold / pre-hold week XP modifier banner */}
             {(() => {
               const wn = week.weekNumber;
@@ -499,6 +492,12 @@ export default function DashboardPage() {
               }
               return null;
             })()}
+            <button
+              onClick={() => router.push("/guide")}
+              className="text-xs text-muted hover:text-fire underline underline-offset-2 mt-3 transition-colors"
+            >
+              View full training schedule →
+            </button>
           </div>
         )}
 
