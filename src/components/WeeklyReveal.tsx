@@ -28,13 +28,20 @@ interface WeekScore {
   prBonus: number;
   ontimeBonus: number;
   firstSubmissionBonus: number;
+  forgeBonus: number;
   berserkerMultiplier: number;
+}
+
+interface ShieldMessage {
+  giverName: string;
+  message: string | null;
 }
 
 interface WeeklyRevealProps {
   score: WeekScore;
   prevXp: number;
   prevTitle: string;
+  shieldMessages?: ShieldMessage[];
   onDismiss: () => void;
 }
 
@@ -46,13 +53,14 @@ const XP_LINES = [
   { key: "secondChallengePoints",label: "Group challenge",   icon: "⚔️" },
   { key: "streakBonus",          label: "Streak",            icon: "🔥" },
   { key: "shieldPoints",         label: "Shields received",  icon: "🛡️" },
+  { key: "forgeBonus",           label: "Berserker's Forge", icon: "⚒️" },
   { key: "prBonus",              label: "PR trial",          icon: "💪" },
   { key: "ontimeBonus",          label: "On time",           icon: "⏱️" },
 ] as const;
 
 type ScoreKey = typeof XP_LINES[number]["key"];
 
-export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: WeeklyRevealProps) {
+export default function WeeklyReveal({ score, prevXp, prevTitle, shieldMessages = [], onDismiss }: WeeklyRevealProps) {
   const [phase, setPhase] = useState<"intro" | "breakdown" | "total" | "levelup">("intro");
   const [visibleLines, setVisibleLines] = useState(0);
   const [displayXp, setDisplayXp] = useState(prevXp);
@@ -228,6 +236,20 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, onDismiss }: We
                   +{Math.round(score.totalFinal * 10) / 10}
                 </div>
                 <div className="text-xs text-muted mt-2">Total XP: <span className="text-gold font-bold">{Math.round(displayXp)}</span></div>
+              </div>
+            )}
+
+            {phase === "total" && shieldMessages.length > 0 && (
+              <div className="mt-4 p-4 bg-card border border-ice/20 rounded-lg text-left animate-[fadeIn_0.5s_ease-out]">
+                <div className="text-xs text-muted uppercase tracking-wider mb-2">🛡️ Messages with your shields</div>
+                <ul className="space-y-2">
+                  {shieldMessages.map((m, i) => (
+                    <li key={i} className="text-sm">
+                      <span className="text-fire font-semibold">{m.giverName}</span>
+                      {m.message ? <span className="text-foreground">: “{m.message}”</span> : null}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 

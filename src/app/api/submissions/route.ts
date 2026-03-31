@@ -15,10 +15,12 @@ export async function POST(request: NextRequest) {
       kmRun,
       runsCount,
       gymSessions,
+      berserkerGym,
       soloChallengeDone,
       secondChallengeResult,
       secondChallengeAttempted,
       hypeVoteFor,
+      hypeVoteMessage,
       prTrialResult,
       mtbKm,
       hikingKm,
@@ -64,6 +66,7 @@ export async function POST(request: NextRequest) {
         kmRun: Number(kmRun),
         runsCount: Number(runsCount),
         gymSessions: Number(gymSessions),
+        berserkerGym: Boolean(berserkerGym),
         soloChallengeDone: Boolean(soloChallengeDone),
         secondChallengeResult: secondChallengeResult != null ? Number(secondChallengeResult) : null,
         secondChallengeAttempted: secondChallengeAttempted !== false,
@@ -79,10 +82,15 @@ export async function POST(request: NextRequest) {
       .returning();
 
     if (hypeVoteFor) {
+      const msg =
+        typeof hypeVoteMessage === "string" && hypeVoteMessage.trim()
+          ? hypeVoteMessage.trim().slice(0, 300)
+          : null;
       await db.insert(hypeVotes).values({
         giverId: session.playerId,
         receiverId: Number(hypeVoteFor),
         weekId,
+        message: msg,
       });
     }
 

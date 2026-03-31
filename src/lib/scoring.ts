@@ -18,11 +18,14 @@ import {
   SHIELD_BONUS_PCT,
   PR_BONUS,
   ONTIME_BONUS,
+  FORGE_BONUS,
   SKALD_BONUS,
   STREAK_BONUS_PER_WEEK,
   STREAK_BONUS_CAP,
   BERSERKER_MULTIPLIER,
-  KM_POINTS_POOL,
+  KM_POOL_BASE,
+  KM_XP_RATE,
+  GYM_KM_EQUIVALENT,
   DIFFICULTY_POINTS,
   CONSOLIDATION_WEEKS,
   BACKOFF_WEEK,
@@ -52,15 +55,21 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
     subsByPlayer[sub.playerId] = sub;
   }
 
-  // STEP 2: Proportional km points
+  // STEP 2: Dynamic km pool — scales with total group effort (running + gym)
   const totalGroupKm = weekSubs.reduce((sum, s) => sum + s.kmRun, 0);
+  const totalGroupKmEq = weekSubs.reduce(
+    (sum, s) => sum + s.kmRun + s.gymSessions * GYM_KM_EQUIVALENT, 0
+  );
+  const dynamicPool = KM_POOL_BASE + totalGroupKmEq * KM_XP_RATE;
+
   const kmPointsMap: Record<number, number> = {};
   for (const p of allPlayers) {
     const sub = subsByPlayer[p.id];
-    if (!sub || totalGroupKm === 0) {
+    if (!sub || totalGroupKmEq === 0) {
       kmPointsMap[p.id] = 0;
     } else {
-      kmPointsMap[p.id] = Math.min(KM_POINTS_POOL, (sub.kmRun / totalGroupKm) * KM_POINTS_POOL);
+      const playerKmEq = sub.kmRun + sub.gymSessions * GYM_KM_EQUIVALENT;
+      kmPointsMap[p.id] = Math.round((playerKmEq / totalGroupKmEq) * dynamicPool * 10) / 10;
     }
   }
 
@@ -257,6 +266,13 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
     ontimeMap[p.id] = sub && !sub.isLate ? ONTIME_BONUS : 0;
   }
 
+  // STEP 9b: Berserker's Forge — hard gym session tagged (+50% workout value)
+  const forgeMap: Record<number, number> = {};
+  for (const p of allPlayers) {
+    const sub = subsByPlayer[p.id];
+    forgeMap[p.id] = sub?.berserkerGym ? FORGE_BONUS : 0;
+  }
+
   // STEP 10: Berserker check
   const berserkerMap: Record<number, number> = {};
   for (const p of allPlayers) {
@@ -305,6 +321,7 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
       shieldMap[p.id] +
       prMap[p.id] +
       ontimeMap[p.id] +
+      forgeMap[p.id] +
       firstBonus;
 
     // Hold/deload week multiplier: -25% during hold weeks, +50% the week before
@@ -317,7 +334,8 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
       streakMap[p.id] +
       shieldMap[p.id] +
       prMap[p.id] +
-      ontimeMap[p.id];
+      ontimeMap[p.id] +
+      forgeMap[p.id];
 
     let weekMultiplier = 1.0;
     const wn = week.weekNumber;
@@ -355,6 +373,7 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
       prBonus: prMap[p.id],
       ontimeBonus: ontimeMap[p.id],
       firstSubmissionBonus: firstBonus,
+      forgeBonus: forgeMap[p.id],
       berserkerMultiplier: berserkerMap[p.id],
       totalRaw: Math.round(totalRaw * 10) / 10,
       totalFinal,

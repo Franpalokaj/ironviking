@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
           ...s,
           weeklyGained: Math.round((s.xpTotalAfter - (prevXpMap[s.playerId] || 0)) * 10) / 10,
         }))
-        .sort((a, b) => b.weeklyGained - a.weeklyGained);
+        .sort((a, b) => b.totalFinal - a.totalFinal || b.weeklyGained - a.weeklyGained || a.playerId - b.playerId);
 
       const subs = await db
         .select()
@@ -53,8 +53,15 @@ export async function GET(request: NextRequest) {
         .where(eq(hypeVotes.weekId, Number(weekId)));
 
       const shieldCounts: Record<number, number> = {};
+      const shieldMessagesByPlayer: Record<number, { giverName: string; message: string | null }[]> = {};
       shields.forEach((s) => {
         shieldCounts[s.receiverId] = (shieldCounts[s.receiverId] || 0) + 1;
+        const giver = allPlayers.find((p) => p.id === s.giverId);
+        if (!shieldMessagesByPlayer[s.receiverId]) shieldMessagesByPlayer[s.receiverId] = [];
+        shieldMessagesByPlayer[s.receiverId].push({
+          giverName: giver?.vikingName || "A warrior",
+          message: s.message ?? null,
+        });
       });
 
       const submittedPlayerIds = new Set(subs.map((s) => s.playerId));
@@ -64,6 +71,7 @@ export async function GET(request: NextRequest) {
         players: allPlayers,
         submittedPlayerIds: Array.from(submittedPlayerIds),
         shieldCounts,
+        shieldMessagesByPlayer,
       });
     }
 

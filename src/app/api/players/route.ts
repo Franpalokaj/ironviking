@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { players, weeklyScores, submissions, hypeVotes, milestones, conquests, weeks, challenges } from "@/db/schema";
-import { eq, sql, desc } from "drizzle-orm";
+import { eq, sql, desc, inArray } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,6 +38,26 @@ export async function GET(request: NextRequest) {
         .select({ count: sql<number>`count(*)` })
         .from(hypeVotes)
         .where(eq(hypeVotes.giverId, Number(playerId)));
+
+      const votesReceived = await db
+        .select({ weekId: hypeVotes.weekId, giverId: hypeVotes.giverId, message: hypeVotes.message })
+        .from(hypeVotes)
+        .where(eq(hypeVotes.receiverId, Number(playerId)));
+
+      const giverIds = [...new Set(votesReceived.map((v) => v.giverId))];
+      const giverPlayers = giverIds.length > 0
+        ? await db.select({ id: players.id, vikingName: players.vikingName }).from(players).where(inArray(players.id, giverIds))
+        : [];
+      const giverNames: Record<number, string> = Object.fromEntries(giverPlayers.map((p) => [p.id, p.vikingName || "A warrior"]));
+
+      const shieldMessagesByWeek: Record<number, { giverName: string; message: string | null }[]> = {};
+      votesReceived.forEach((v) => {
+        if (!shieldMessagesByWeek[v.weekId]) shieldMessagesByWeek[v.weekId] = [];
+        shieldMessagesByWeek[v.weekId].push({
+          giverName: giverNames[v.giverId] || "A warrior",
+          message: v.message ?? null,
+        });
+      });
 
       const playerMilestones = await db
         .select()
@@ -108,6 +128,7 @@ export async function GET(request: NextRequest) {
         milestones: playerMilestones,
         conquests: playerConquests,
         questLog,
+        shieldMessagesByWeek,
       });
     }
 

@@ -46,10 +46,12 @@ export default function SubmitPage() {
   const [kmRun, setKmRun] = useState("");
   const [runsCount, setRunsCount] = useState(0);
   const [gymSessions, setGymSessions] = useState(0);
+  const [berserkerGym, setBerserkerGym] = useState(false);
   const [soloChallengeDone, setSoloChallengeDone] = useState(false);
   const [secondChallengeResult, setSecondChallengeResult] = useState("");
   const [secondChallengeAttempted, setSecondChallengeAttempted] = useState(false);
   const [hypeVoteFor, setHypeVoteFor] = useState<number | null>(null);
+  const [hypeVoteMessage, setHypeVoteMessage] = useState("");
   const [draftSaved, setDraftSaved] = useState(false);
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -104,10 +106,12 @@ export default function SubmitPage() {
       if (draft.kmRun !== undefined) setKmRun(draft.kmRun);
       if (draft.runsCount !== undefined) setRunsCount(draft.runsCount);
       if (draft.gymSessions !== undefined) setGymSessions(draft.gymSessions);
+      if (draft.berserkerGym !== undefined) setBerserkerGym(draft.berserkerGym);
       if (draft.soloChallengeDone !== undefined) setSoloChallengeDone(draft.soloChallengeDone);
       if (draft.secondChallengeResult !== undefined) setSecondChallengeResult(draft.secondChallengeResult);
       if (draft.secondChallengeAttempted !== undefined) setSecondChallengeAttempted(draft.secondChallengeAttempted);
       if (draft.hypeVoteFor !== undefined) setHypeVoteFor(draft.hypeVoteFor);
+      if (draft.hypeVoteMessage !== undefined) setHypeVoteMessage(draft.hypeVoteMessage ?? "");
     } catch { /* ignore */ }
   }, [week]);
 
@@ -116,8 +120,8 @@ export default function SubmitPage() {
     if (!week) return;
     const draftKey = `iron-viking-draft-week-${week.id}`;
     const current = {
-      kmRun, runsCount, gymSessions, soloChallengeDone,
-      secondChallengeResult, secondChallengeAttempted, hypeVoteFor,
+      kmRun, runsCount, gymSessions, berserkerGym, soloChallengeDone,
+      secondChallengeResult, secondChallengeAttempted, hypeVoteFor, hypeVoteMessage,
       ...updates,
     };
     localStorage.setItem(draftKey, JSON.stringify(current));
@@ -173,10 +177,12 @@ export default function SubmitPage() {
           kmRun: effectiveKm,
           runsCount,
           gymSessions,
+          berserkerGym,
           soloChallengeDone,
           secondChallengeResult: resultValue,
           secondChallengeAttempted,
           hypeVoteFor,
+          hypeVoteMessage: hypeVoteMessage.trim() || null,
           mtbKm: mtbKmVal || null,
           hikingKm: hikingKmVal || null,
           swimmingKm: swimmingKmVal || null,
@@ -360,6 +366,17 @@ export default function SubmitPage() {
                   className="w-12 h-12 bg-card border border-card-border rounded-lg text-foreground text-xl hover:border-fire/30"
                 >+</button>
               </div>
+              <button
+                type="button"
+                onClick={() => { setBerserkerGym(!berserkerGym); saveDraft({ berserkerGym: !berserkerGym }); }}
+                className={`mt-2 w-full flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                  berserkerGym ? "border-fire bg-fire/10 text-fire" : "border-card-border bg-card text-muted hover:border-fire/30"
+                }`}
+              >
+                <span className="font-[family-name:var(--font-cinzel)] font-semibold">⚒️ Berserker&apos;s Forge</span>
+                <span className="text-xs">{berserkerGym ? "+15 XP" : "Tag a hard battle"}</span>
+              </button>
+              <p className="text-[10px] text-muted mt-1">One session was a proper forge — counts 50% more.</p>
             </div>
 
             {kmTarget && (
@@ -621,6 +638,20 @@ export default function SubmitPage() {
               </button>
             ))}
           </div>
+          {hypeVoteFor && (
+            <div className="mt-3">
+              <label className="block text-xs text-muted mb-1">Add a short message (optional)</label>
+              <input
+                type="text"
+                maxLength={300}
+                value={hypeVoteMessage}
+                onChange={(e) => { setHypeVoteMessage(e.target.value); saveDraft({ hypeVoteMessage: e.target.value }); }}
+                placeholder="e.g. Great week, warrior!"
+                className="w-full bg-background border border-card-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-fire/50"
+              />
+              <p className="text-[10px] text-muted mt-0.5">They’ll see this when scores are settled.</p>
+            </div>
+          )}
           {!hypeVoteFor && (
             <p className="text-xs text-muted mt-2">Tap a warrior to give your shield — or withhold it this week.</p>
           )}

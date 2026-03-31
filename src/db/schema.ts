@@ -72,6 +72,7 @@ export const submissions = pgTable("submissions", {
   kmRun: real("km_run").notNull(),
   runsCount: integer("runs_count").notNull(),
   gymSessions: integer("gym_sessions").notNull(),
+  berserkerGym: boolean("berserker_gym").default(false).notNull(),
   soloChallengeDone: boolean("solo_challenge_done").notNull(),
   secondChallengeResult: real("second_challenge_result"),
   secondChallengeAttempted: boolean("second_challenge_attempted").default(false).notNull(),
@@ -115,6 +116,7 @@ export const benchmarkGoals = pgTable("benchmark_goals", {
   xpReward: integer("xp_reward").notNull(),
   achieved: boolean("achieved").default(false).notNull(),
   achievedAt: timestamp("achieved_at"),
+  latestRecordedValue: real("latest_recorded_value"), // progress log; does not change baseline or xpReward
 });
 
 export const hypeVotes = pgTable("hype_votes", {
@@ -122,6 +124,7 @@ export const hypeVotes = pgTable("hype_votes", {
   giverId: integer("giver_id").references(() => players.id).notNull(),
   receiverId: integer("receiver_id").references(() => players.id).notNull(),
   weekId: integer("week_id").references(() => weeks.id).notNull(),
+  message: text("message"),
 }, (table) => [
   unique("unique_vote_giver_week").on(table.giverId, table.weekId),
 ]);
@@ -149,6 +152,7 @@ export const weeklyScores = pgTable("weekly_scores", {
   prBonus: integer("pr_bonus").notNull(),
   ontimeBonus: integer("ontime_bonus").notNull(),
   firstSubmissionBonus: integer("first_submission_bonus").default(0).notNull(),
+  forgeBonus: integer("forge_bonus").default(0).notNull(),
   berserkerMultiplier: real("berserker_multiplier").notNull(),
   totalRaw: real("total_raw").notNull(),
   totalFinal: real("total_final").notNull(),

@@ -39,7 +39,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "skill and value required" }, { status: 400 });
     }
 
-    // Check if a baseline already exists for this skill
+    const numValue = Number(value);
+    const def = BENCHMARK_DEFINITIONS.find(d => d.skill === skill);
+
+    // If a goal exists for this skill, do NOT change baseline or xpReward — only update progress log
+    const [existingGoal] = def
+      ? await db
+          .select()
+          .from(benchmarkGoals)
+          .where(and(
+            eq(benchmarkGoals.playerId, session.playerId),
+            eq(benchmarkGoals.skill, skill),
+          ))
+          .limit(1)
+      : [];
+
+    if (existingGoal) {
+      await db
+        .update(benchmarkGoals)
+        .set({ latestRecordedValue: numValue })
+        .where(eq(benchmarkGoals.id, existingGoal.id));
+
+      const achieved = def!.higherIsBetter
+        ? numValue >= existingGoal.goalValue
+        : numValue <= existingGoal.goalValue;
+
+      if (achieved && !existingGoal.achieved) {
+        await db
+          .update(benchmarkGoals)
+          .set({ achieved: true, achievedAt: new Date() })
+          .where(eq(benchmarkGoals.id, existingGoal.id));
+      }
+
+      const [baseline] = await db
+        .select()
+        .from(baselines)
+        .where(and(eq(baselines.playerId, session.playerId), eq(baselines.skill, skill)))
+        .limit(1);
+
+      return NextResponse.json({ baseline: baseline || null, progressOnly: true });
+    }
+
+    // No goal: create or update baseline as before
     const [existing] = await db
       .select()
       .from(baselines)
@@ -50,18 +91,16 @@ export async function POST(request: NextRequest) {
     if (existing) {
       [baseline] = await db
         .update(baselines)
-        .set({ value: Number(value), setAt: new Date() })
+        .set({ value: numValue, setAt: new Date() })
         .where(eq(baselines.id, existing.id))
         .returning();
     } else {
       [baseline] = await db
         .insert(baselines)
-        .values({ playerId: session.playerId, skill, value: Number(value), setAt: new Date() })
+        .values({ playerId: session.playerId, skill, value: numValue, setAt: new Date() })
         .returning();
     }
 
-    // Check if any benchmark goals are now achieved
-    const def = BENCHMARK_DEFINITIONS.find(d => d.skill === skill);
     if (def) {
       const goals = await db
         .select()
@@ -73,10 +112,7 @@ export async function POST(request: NextRequest) {
         ));
 
       for (const goal of goals) {
-        const achieved = def.higherIsBetter
-          ? Number(value) >= goal.goalValue
-          : Number(value) <= goal.goalValue;
-
+        const achieved = def.higherIsBetter ? numValue >= goal.goalValue : numValue <= goal.goalValue;
         if (achieved) {
           await db
             .update(benchmarkGoals)

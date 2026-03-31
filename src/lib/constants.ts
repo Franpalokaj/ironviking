@@ -106,11 +106,15 @@ export const ACTIVITY_MULTIPLIERS = {
 export const FIRST_SUBMISSION_BONUS = 100; // flat XP for first-ever submission, guarantees the level-up animation
 export const PR_BONUS = 20;
 export const ONTIME_BONUS = 10;
+export const FORGE_BONUS = 15; // Berserker's Forge: hard gym session tagged, +50% workout value (15 XP)
 export const SKALD_BONUS = 10;
 export const STREAK_BONUS_PER_WEEK = 5;
 export const STREAK_BONUS_CAP = 50;
 export const BERSERKER_MULTIPLIER = 1.5;
-export const KM_POINTS_POOL = 60;
+export const KM_POINTS_POOL = 60; // legacy fixed pool (no longer used in scoring)
+export const KM_POOL_BASE = 30;      // minimum XP pool floor regardless of distance
+export const KM_XP_RATE = 0.5;       // additional XP per group km-equivalent
+export const GYM_KM_EQUIVALENT = 2.5; // each gym session = 2.5 km-equivalent in the pool
 
 export const SIGILS = [
   "wolf", "raven", "bear", "serpent", "dragon",

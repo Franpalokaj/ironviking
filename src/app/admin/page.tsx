@@ -439,6 +439,7 @@ export default function AdminPage() {
     secondChallengePoints: 0,
     streakBonus: 10,
     shieldPoints: 4.2,
+    forgeBonus: 0,
     prBonus: 0,
     ontimeBonus: 10,
     firstSubmissionBonus: 0,
@@ -451,6 +452,7 @@ export default function AdminPage() {
     xpTotalAfter: 145,
     titleAfter: "Farmhand",
     firstSubmissionBonus: 100,
+    forgeBonus: 15,
     berserkerMultiplier: 1.5,
   };
 

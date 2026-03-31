@@ -35,6 +35,7 @@ interface Score {
   prBonus: number;
   ontimeBonus: number;
   firstSubmissionBonus: number;
+  forgeBonus: number;
   berserkerMultiplier: number;
   totalRaw: number;
   totalFinal: number;
@@ -94,13 +95,14 @@ export default function ProfilePage() {
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [completingId, setCompletingId] = useState<number | null>(null);
   const [benchmarkBaselines, setBenchmarkBaselines] = useState<{ skill: string; value: number; setAt: string }[]>([]);
-  const [benchmarkGoalsList, setBenchmarkGoalsList] = useState<{ skill: string; goalValue: number; xpReward: number; achieved: boolean }[]>([]);
+  const [benchmarkGoalsList, setBenchmarkGoalsList] = useState<{ skill: string; goalValue: number; xpReward: number; achieved: boolean; latestRecordedValue?: number | null }[]>([]);
   const [recordingSkill, setRecordingSkill] = useState<string | null>(null);
   const [recordValue, setRecordValue] = useState("");
   const [settingGoalSkill, setSettingGoalSkill] = useState<string | null>(null);
   const [goalValue, setGoalValue] = useState("");
   const [benchmarkSaving, setBenchmarkSaving] = useState(false);
   const [showLogbook, setShowLogbook] = useState(false);
+  const [shieldMessagesByWeek, setShieldMessagesByWeek] = useState<Record<number, { giverName: string; message: string | null }[]>>({});
 
   const loadData = useCallback(async () => {
     try {
@@ -120,6 +122,7 @@ export default function ProfilePage() {
       setMilestones(data.milestones || []);
       setConquests(data.conquests || []);
       setQuestLog(data.questLog || []);
+      setShieldMessagesByWeek(data.shieldMessagesByWeek || {});
 
       const baselineRes = await fetch(`/api/baselines?playerId=${playerId}`);
       if (baselineRes.ok) {
@@ -444,7 +447,8 @@ export default function ProfilePage() {
           {BENCHMARK_DEFINITIONS.map((def) => {
             const baseline = benchmarkBaselines.find(b => b.skill === def.skill);
             const goal = benchmarkGoalsList.find(g => g.skill === def.skill);
-            const current = baseline?.value ?? null;
+            // Once goal is set, baseline is locked; "current" shows latest progress log or baseline
+            const current = (goal?.latestRecordedValue != null ? goal.latestRecordedValue : baseline?.value) ?? null;
             const progressPct = current !== null
               ? Math.min(100, Math.round(((current - def.baseline) / (def.raceReady - def.baseline)) * 100))
               : 0;
@@ -582,6 +586,7 @@ export default function ProfilePage() {
                   if (s.secondChallengePoints > 0) lines.push({ label: "Group/comp challenge", value: s.secondChallengePoints });
                   if (s.streakBonus > 0) lines.push({ label: "Streak", value: s.streakBonus });
                   if (s.shieldPoints > 0) lines.push({ label: "Shield", value: Math.round(s.shieldPoints * 10) / 10 });
+                  if (s.forgeBonus > 0) lines.push({ label: "Berserker's Forge", value: s.forgeBonus });
                   if (s.prBonus > 0) lines.push({ label: "PR trial", value: s.prBonus });
                   if (s.ontimeBonus > 0) lines.push({ label: "On-time", value: s.ontimeBonus });
                   if (s.firstSubmissionBonus > 0) lines.push({ label: "First submission", value: s.firstSubmissionBonus });
@@ -616,6 +621,18 @@ export default function ProfilePage() {
                       <div className="text-[10px] text-muted mt-1 opacity-60">
                         Cumulative: {Math.round(s.xpTotalAfter)} XP — {s.titleAfter}
                       </div>
+                      {shieldMessagesByWeek[s.weekId]?.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-card-border/50 text-[10px] text-muted">
+                          <span className="font-semibold text-ice">🛡️ </span>
+                          {shieldMessagesByWeek[s.weekId].map((m, i) => (
+                            <span key={i}>
+                              {i > 0 && " · "}
+                              <span className="text-fire/90">{m.giverName}</span>
+                              {m.message ? <>: “{m.message}”</> : null}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
