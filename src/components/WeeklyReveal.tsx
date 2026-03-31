@@ -53,7 +53,7 @@ const XP_LINES = [
   { key: "secondChallengePoints",label: "Group challenge",   icon: "⚔️" },
   { key: "streakBonus",          label: "Streak",            icon: "🔥" },
   { key: "shieldPoints",         label: "Shields received",  icon: "🛡️" },
-  { key: "forgeBonus",           label: "Berserker's Forge", icon: "⚒️" },
+  { key: "forgeBonus",           label: "Workout XP",         icon: "⚒️" },
   { key: "prBonus",              label: "PR trial",          icon: "💪" },
   { key: "ontimeBonus",          label: "On time",           icon: "⏱️" },
 ] as const;
@@ -241,12 +241,18 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, shieldMessages 
 
             {phase === "total" && shieldMessages.length > 0 && (
               <div className="mt-4 p-4 bg-card border border-ice/20 rounded-lg text-left animate-[fadeIn_0.5s_ease-out]">
-                <div className="text-xs text-muted uppercase tracking-wider mb-2">🛡️ Messages with your shields</div>
-                <ul className="space-y-2">
+                <div className="text-xs text-muted uppercase tracking-wider mb-1">🛡️ Shields raised for you</div>
+                <p className="text-[10px] text-muted mb-3">These are the warriors who gave you a shield. A note only appears if they wrote one when submitting.</p>
+                <ul className="space-y-3">
                   {shieldMessages.map((m, i) => (
-                    <li key={i} className="text-sm">
-                      <span className="text-fire font-semibold">{m.giverName}</span>
-                      {m.message ? <span className="text-foreground">: “{m.message}”</span> : null}
+                    <li key={i} className="text-sm border-b border-card-border/40 last:border-0 last:pb-0 pb-3">
+                      <div>
+                        <span className="text-muted text-xs">From </span>
+                        <span className="text-fire font-semibold">{m.giverName}</span>
+                      </div>
+                      {m.message ? (
+                        <div className="text-foreground mt-1 text-sm">“{m.message}”</div>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

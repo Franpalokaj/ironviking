@@ -70,6 +70,7 @@ interface Conquest {
 }
 
 interface QuestLogEntry {
+  weekId: number;
   weekNumber: number;
   soloChallenge: { title: string; track: string; difficulty: string } | null;
   soloDone: boolean;
@@ -586,7 +587,7 @@ export default function ProfilePage() {
                   if (s.secondChallengePoints > 0) lines.push({ label: "Group/comp challenge", value: s.secondChallengePoints });
                   if (s.streakBonus > 0) lines.push({ label: "Streak", value: s.streakBonus });
                   if (s.shieldPoints > 0) lines.push({ label: "Shield", value: Math.round(s.shieldPoints * 10) / 10 });
-                  if (s.forgeBonus > 0) lines.push({ label: "Berserker's Forge", value: s.forgeBonus });
+                  if (s.forgeBonus > 0) lines.push({ label: "Workout XP", value: s.forgeBonus });
                   if (s.prBonus > 0) lines.push({ label: "PR trial", value: s.prBonus });
                   if (s.ontimeBonus > 0) lines.push({ label: "On-time", value: s.ontimeBonus });
                   if (s.firstSubmissionBonus > 0) lines.push({ label: "First submission", value: s.firstSubmissionBonus });
@@ -622,14 +623,13 @@ export default function ProfilePage() {
                         Cumulative: {Math.round(s.xpTotalAfter)} XP — {s.titleAfter}
                       </div>
                       {shieldMessagesByWeek[s.weekId]?.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-card-border/50 text-[10px] text-muted">
-                          <span className="font-semibold text-ice">🛡️ </span>
+                        <div className="mt-2 pt-2 border-t border-card-border/50 text-[10px] text-muted space-y-1">
+                          <div className="font-semibold text-ice">🛡️ Shields from</div>
                           {shieldMessagesByWeek[s.weekId].map((m, i) => (
-                            <span key={i}>
-                              {i > 0 && " · "}
-                              <span className="text-fire/90">{m.giverName}</span>
-                              {m.message ? <>: “{m.message}”</> : null}
-                            </span>
+                            <div key={i}>
+                              <span className="text-fire/90 font-medium">{m.giverName}</span>
+                              {m.message ? <span className="text-foreground"> — “{m.message}”</span> : null}
+                            </div>
                           ))}
                         </div>
                       )}

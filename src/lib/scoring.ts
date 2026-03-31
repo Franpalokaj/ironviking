@@ -10,7 +10,7 @@ import {
   milestones,
   conquests,
 } from "@/db/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import {
   RANK_BONUSES,
   COMPETITIVE_BONUSES,
@@ -560,7 +560,7 @@ async function checkSkald(weekId: number, week: typeof weeks.$inferSelect) {
   const votes = await db
     .select()
     .from(hypeVotes)
-    .where(sql`${hypeVotes.weekId} = ANY(${monthWeekIds})`);
+    .where(inArray(hypeVotes.weekId, monthWeekIds));
 
   const voteCountsByReceiver: Record<number, number> = {};
   votes.forEach((v) => {
