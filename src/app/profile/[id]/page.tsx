@@ -579,7 +579,12 @@ export default function ProfilePage() {
                   const lines: { label: string; value: number }[] = [];
 
                   if (s.kmPoints > 0) {
-                    const kmLabel = sub ? `${Math.round(sub.kmRun * 10) / 10} km` : "km";
+                    let kmLabel = sub ? `${Math.round(sub.kmRun * 10) / 10} km` : "km";
+                    if (sub && sub.gymSessions > 0 && sub.kmRun === 0) {
+                      kmLabel = `${sub.gymSessions} gym session${sub.gymSessions > 1 ? "s" : ""}`;
+                    } else if (sub && sub.gymSessions > 0) {
+                      kmLabel = `${Math.round(sub.kmRun * 10) / 10} km + ${sub.gymSessions} gym`;
+                    }
                     lines.push({ label: kmLabel, value: Math.round(s.kmPoints * 10) / 10 });
                   }
                   if (s.rankBonus > 0) lines.push({ label: `Rank #${s.realmRankWeek}`, value: s.rankBonus });
