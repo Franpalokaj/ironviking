@@ -463,41 +463,44 @@ export default function DashboardPage() {
             <div className="text-xs text-muted mt-1">
               {week.type === "competition" ? "⚔️ Competition Week" : "🛡️ Collaboration Week"}
             </div>
-            {/* Hold / pre-hold week XP modifier banner */}
-            {(() => {
-              const wn = week.weekNumber;
-              const isHold = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn) || wn === BACKOFF_WEEK;
-              const isPreHold = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn + 1) || wn + 1 === BACKOFF_WEEK;
-              if (isHold) {
-                return (
-                  <div className="mt-3 inline-flex items-center gap-2 bg-ice/10 border border-ice/30 rounded-lg px-4 py-2 animate-[fadeIn_0.6s_ease-out]">
-                    <span className="text-sm">❄️</span>
-                    <div className="text-left">
-                      <div className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-ice">Consolidation Week</div>
-                      <div className="text-[10px] text-muted">XP this week is reduced by 25% — rest, recover, hold your gains.</div>
+            {/* Stack banner above schedule link (inline-flex + button were sitting side-by-side in text-center) */}
+            <div className="mt-3 flex flex-col items-center gap-3 w-full">
+              {(() => {
+                const wn = week.weekNumber;
+                const isHold = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn) || wn === BACKOFF_WEEK;
+                const isPreHold = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn + 1) || wn + 1 === BACKOFF_WEEK;
+                if (isHold) {
+                  return (
+                    <div className="flex w-full max-w-md items-center gap-2 bg-ice/10 border border-ice/30 rounded-lg px-4 py-2 animate-[fadeIn_0.6s_ease-out]">
+                      <span className="text-sm shrink-0">❄️</span>
+                      <div className="text-left min-w-0">
+                        <div className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-ice">Consolidation Week</div>
+                        <div className="text-[10px] text-muted">XP this week is reduced by 25% — rest, recover, hold your gains.</div>
+                      </div>
                     </div>
-                  </div>
-                );
-              }
-              if (isPreHold) {
-                return (
-                  <div className="mt-3 inline-flex items-center gap-2 bg-gold/10 border border-gold/30 rounded-lg px-4 py-2 animate-[fadeIn_0.6s_ease-out]">
-                    <span className="text-sm">⚡</span>
-                    <div className="text-left">
-                      <div className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-gold">Last Push</div>
-                      <div className="text-[10px] text-muted">XP this week is boosted by 50% — hold week follows. Go hard.</div>
+                  );
+                }
+                if (isPreHold) {
+                  return (
+                    <div className="flex w-full max-w-md items-center gap-2 bg-gold/10 border border-gold/30 rounded-lg px-4 py-2 animate-[fadeIn_0.6s_ease-out]">
+                      <span className="text-sm shrink-0">⚡</span>
+                      <div className="text-left min-w-0">
+                        <div className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-gold">Last Push</div>
+                        <div className="text-[10px] text-muted">XP this week is boosted by 50% — hold week follows. Go hard.</div>
+                      </div>
                     </div>
-                  </div>
-                );
-              }
-              return null;
-            })()}
-            <button
-              onClick={() => router.push("/guide")}
-              className="text-xs text-muted hover:text-fire underline underline-offset-2 mt-3 transition-colors"
-            >
-              View full training schedule →
-            </button>
+                  );
+                }
+                return null;
+              })()}
+              <button
+                type="button"
+                onClick={() => router.push("/guide")}
+                className="text-xs text-muted hover:text-fire underline underline-offset-2 transition-colors"
+              >
+                View full training schedule →
+              </button>
+            </div>
           </div>
         )}
 
