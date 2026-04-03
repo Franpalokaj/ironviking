@@ -139,6 +139,10 @@ export async function GET(request: NextRequest) {
         sigil: players.sigil,
         isAdmin: players.isAdmin,
         onboardingComplete: players.onboardingComplete,
+        weeklyKmGoal: players.weeklyKmGoal,
+        catchUpXpMultiplier: players.catchUpXpMultiplier,
+        catchUpStartWeek: players.catchUpStartWeek,
+        catchUpEndWeek: players.catchUpEndWeek,
       })
       .from(players);
 

@@ -356,8 +356,16 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
       weekMultiplier = PRE_HOLD_BONUS;
     }
 
+    let catchUpMult = 1;
+    const cuM = Number(p.catchUpXpMultiplier ?? 1);
+    const cuStart = p.catchUpStartWeek;
+    const cuEnd = p.catchUpEndWeek;
+    if (cuM > 1 && cuStart != null && cuEnd != null && wn >= cuStart && wn <= cuEnd) {
+      catchUpMult = cuM;
+    }
+
     const totalFinal = Math.round(
-      (rawWithoutFirst * berserkerMap[p.id] * weekMultiplier + firstBonus) * 10
+      (rawWithoutFirst * berserkerMap[p.id] * weekMultiplier * catchUpMult + firstBonus) * 10
     ) / 10;
 
     // Cumulative XP from scratch — rescore-safe; conquest XP can't be lost by re-running
@@ -386,6 +394,7 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
       runBonus: runBonusMap[p.id],
       gymBonus: gymBonusMap[p.id],
       berserkerMultiplier: berserkerMap[p.id],
+      catchUpMultiplier: catchUpMult,
       totalRaw: Math.round(totalRaw * 10) / 10,
       totalFinal,
       xpTotalAfter: Math.round(newXp * 10) / 10,

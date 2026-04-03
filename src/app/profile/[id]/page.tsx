@@ -39,6 +39,7 @@ interface Score {
   runBonus: number;
   gymBonus: number;
   berserkerMultiplier: number;
+  catchUpMultiplier?: number;
   totalRaw: number;
   totalFinal: number;
   xpTotalAfter: number;
@@ -602,6 +603,7 @@ export default function ProfilePage() {
                   if (s.firstSubmissionBonus > 0) lines.push({ label: "First submission", value: s.firstSubmissionBonus });
 
                   const hasBerserker = s.berserkerMultiplier > 1;
+                  const hasCatchUp = (s.catchUpMultiplier ?? 1) > 1;
 
                   return (
                     <div key={s.weekId} className="bg-card border border-card-border rounded-lg p-3">
@@ -625,6 +627,12 @@ export default function ProfilePage() {
                           <>
                             <span className="mx-1 opacity-40">·</span>
                             <span className="text-red-400">Berserker ×{s.berserkerMultiplier}</span>
+                          </>
+                        )}
+                        {hasCatchUp && (
+                          <>
+                            <span className="mx-1 opacity-40">·</span>
+                            <span className="text-gold">Late-join ×{s.catchUpMultiplier ?? 1}</span>
                           </>
                         )}
                       </div>

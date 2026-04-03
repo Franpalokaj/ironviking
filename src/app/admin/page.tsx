@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import WeeklyReveal from "@/components/WeeklyReveal";
 import LeaderboardReveal from "@/components/LeaderboardReveal";
+import { getCurrentWeekNumber } from "@/lib/constants";
 
 interface Week {
   id: number;
@@ -71,7 +72,19 @@ export default function AdminPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [prTrials, setPrTrials] = useState<PrTrial[]>([]);
   const [hypeVotes, setHypeVotes] = useState<{ giverId: number; receiverId: number; weekId: number }[]>([]);
-  const [players, setPlayers] = useState<{ id: number; vikingName: string | null; sigil: string | null; weeklyKmGoal: number | null; isAdmin: boolean; onboardingComplete: boolean }[]>([]);
+  const [players, setPlayers] = useState<
+    {
+      id: number;
+      vikingName: string | null;
+      sigil: string | null;
+      weeklyKmGoal: number | null;
+      isAdmin: boolean;
+      onboardingComplete: boolean;
+      catchUpXpMultiplier?: number | null;
+      catchUpStartWeek?: number | null;
+      catchUpEndWeek?: number | null;
+    }[]
+  >([]);
   const [preview, setPreview] = useState<PreviewMode>("none");
   const [editingPlayer, setEditingPlayer] = useState<number | null>(null);
   const [editSigil, setEditSigil] = useState("");
@@ -84,6 +97,7 @@ export default function AdminPage() {
   const [addXpPlayerId, setAddXpPlayerId] = useState<number | null>(null);
   const [addXpAmount, setAddXpAmount] = useState("");
   const [addXpSaving, setAddXpSaving] = useState(false);
+  const [catchUpSavingId, setCatchUpSavingId] = useState<number | null>(null);
   const [questPlayerId, setQuestPlayerId] = useState<number | null>(null);
   const [playerQuests, setPlayerQuests] = useState<{ id: number; title: string; description: string; xpReward: number; completed: boolean }[]>([]);
   const [newQuestTitle, setNewQuestTitle] = useState("");
@@ -269,6 +283,56 @@ export default function AdminPage() {
       body: JSON.stringify({ submissionId }),
     });
     if (selectedWeek) loadSubmissions(selectedWeek);
+  }
+
+  async function applyLateJoinCatchUp(playerId: number, multiplier: number, weekCount: number) {
+    const start = getCurrentWeekNumber();
+    const end = start + weekCount - 1;
+    setCatchUpSavingId(playerId);
+    setMessage("");
+    try {
+      const res = await fetch("/api/admin/players", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId,
+          catchUpXpMultiplier: multiplier,
+          catchUpStartWeek: start,
+          catchUpEndWeek: end,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data.error || "Failed to set catch-up.");
+        return;
+      }
+      setMessage(
+        `Catch-up set: ×${multiplier} on weekly XP (excl. first-sub bonus) for weeks ${start}–${end}. Re-score those weeks after submissions.`
+      );
+      loadData();
+    } finally {
+      setCatchUpSavingId(null);
+    }
+  }
+
+  async function clearLateJoinCatchUp(playerId: number) {
+    setCatchUpSavingId(playerId);
+    setMessage("");
+    try {
+      const res = await fetch("/api/admin/players", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId, clearCatchUp: true }),
+      });
+      if (!res.ok) {
+        setMessage("Failed to clear catch-up.");
+        return;
+      }
+      setMessage("Catch-up cleared.");
+      loadData();
+    } finally {
+      setCatchUpSavingId(null);
+    }
   }
 
   async function savePlayerEdit(playerId: number) {
@@ -690,6 +754,31 @@ export default function AdminPage() {
                 </div>
                 <div className="text-xs text-muted">
                   Sigil: {p.sigil || "—"} · Weekly goal: {p.weeklyKmGoal ?? "—"} km
+                </div>
+                {Number(p.catchUpXpMultiplier ?? 1) > 1 &&
+                  p.catchUpStartWeek != null &&
+                  p.catchUpEndWeek != null && (
+                    <div className="text-[10px] text-gold/90 mt-1 bg-gold/10 border border-gold/25 rounded px-2 py-1">
+                      Late-join catch-up: ×{Number(p.catchUpXpMultiplier)} on weekly XP (weeks {p.catchUpStartWeek}–{p.catchUpEndWeek}, excl. first-submission bonus)
+                    </div>
+                  )}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => applyLateJoinCatchUp(p.id, 2, 4)}
+                    disabled={catchUpSavingId === p.id}
+                    className="text-[10px] border border-ice/40 text-ice px-2 py-1 rounded hover:bg-ice/10 disabled:opacity-50"
+                  >
+                    {catchUpSavingId === p.id ? "…" : "2× XP — next 4 weeks (from current week)"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => clearLateJoinCatchUp(p.id)}
+                    disabled={catchUpSavingId === p.id || Number(p.catchUpXpMultiplier ?? 1) <= 1}
+                    className="text-[10px] border border-muted/50 text-muted px-2 py-1 rounded hover:bg-card-border/30 disabled:opacity-40"
+                  >
+                    Clear catch-up
+                  </button>
                 </div>
                 {questPlayerId === p.id && (
                   <div className="mt-3 border-t border-card-border pt-3 space-y-3">

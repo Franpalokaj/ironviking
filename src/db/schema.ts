@@ -18,6 +18,10 @@ export const players = pgTable("players", {
   weeklyKmGoal: real("weekly_km_goal"),
   sigil: text("sigil"),
   onboardingComplete: boolean("onboarding_complete").default(false).notNull(),
+  /** Late-join catch-up: multiply weekly XP (excl. first-sub bonus) when week is in [start, end] inclusive */
+  catchUpXpMultiplier: real("catch_up_xp_multiplier").default(1).notNull(),
+  catchUpStartWeek: integer("catch_up_start_week"),
+  catchUpEndWeek: integer("catch_up_end_week"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -156,6 +160,7 @@ export const weeklyScores = pgTable("weekly_scores", {
   runBonus: integer("run_bonus").default(0).notNull(),
   gymBonus: integer("gym_bonus").default(0).notNull(),
   berserkerMultiplier: real("berserker_multiplier").notNull(),
+  catchUpMultiplier: real("catch_up_multiplier").default(1).notNull(),
   totalRaw: real("total_raw").notNull(),
   totalFinal: real("total_final").notNull(),
   xpTotalAfter: real("xp_total_after").notNull(),
