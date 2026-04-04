@@ -98,6 +98,17 @@ export default function AdminPage() {
   const [addXpAmount, setAddXpAmount] = useState("");
   const [addXpSaving, setAddXpSaving] = useState(false);
   const [catchUpSavingId, setCatchUpSavingId] = useState<number | null>(null);
+  const [retroSaving, setRetroSaving] = useState(false);
+  const [retroForm, setRetroForm] = useState({
+    playerId: "",
+    kmRun: "0",
+    runsCount: "0",
+    gymSessions: "0",
+    soloChallengeDone: false,
+    secondChallengeResult: "",
+    hypeVoteFor: "",
+    isLate: false,
+  });
   const [questPlayerId, setQuestPlayerId] = useState<number | null>(null);
   const [playerQuests, setPlayerQuests] = useState<{ id: number; title: string; description: string; xpReward: number; completed: boolean }[]>([]);
   const [newQuestTitle, setNewQuestTitle] = useState("");
@@ -283,6 +294,50 @@ export default function AdminPage() {
       body: JSON.stringify({ submissionId }),
     });
     if (selectedWeek) loadSubmissions(selectedWeek);
+  }
+
+  async function addRetroactiveSubmission() {
+    if (!selectedWeek) {
+      setMessage("Select a week first.");
+      return;
+    }
+    const pid = Number(retroForm.playerId);
+    if (!pid) {
+      setMessage("Choose a player.");
+      return;
+    }
+    setRetroSaving(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/admin/submissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId: pid,
+          weekId: selectedWeek,
+          kmRun: parseFloat(retroForm.kmRun) || 0,
+          runsCount: parseInt(retroForm.runsCount, 10) || 0,
+          gymSessions: parseInt(retroForm.gymSessions, 10) || 0,
+          soloChallengeDone: retroForm.soloChallengeDone,
+          secondChallengeResult: retroForm.secondChallengeResult === "" ? null : retroForm.secondChallengeResult,
+          secondChallengeAttempted: true,
+          hypeVoteFor: retroForm.hypeVoteFor ? Number(retroForm.hypeVoteFor) : null,
+          isLate: retroForm.isLate,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data.error || "Failed to add submission.");
+        return;
+      }
+      setMessage(
+        data.hint ||
+          "Submission added. If this week was already scored, go to Weeks and click Rescore for everyone’s XP to update."
+      );
+      await loadSubmissions(selectedWeek);
+    } finally {
+      setRetroSaving(false);
+    }
   }
 
   async function applyLateJoinCatchUp(playerId: number, multiplier: number, weekCount: number) {
@@ -1166,6 +1221,118 @@ export default function AdminPage() {
                 <div className="text-muted text-sm text-center py-4">No submissions for this week.</div>
               )}
             </div>
+
+            {selectedWeek && (
+              <div className="mt-6 border-t border-card-border pt-4">
+                <div className="text-xs font-bold text-ice mb-2">Add retroactive submission</div>
+                <p className="text-[10px] text-muted mb-3">
+                  For Vikings who missed the deadline or forgot to submit. After saving, open{" "}
+                  <strong className="text-foreground">Weeks</strong> and click <strong className="text-foreground">Rescore</strong> on{" "}
+                  <strong>this week</strong>. If later weeks were already scored, rescore those too in order (week numbers
+                  ascending) so everyone&apos;s cumulative XP/titles stay correct.
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="col-span-2">
+                    <label className="text-muted block mb-0.5">Player</label>
+                    <select
+                      value={retroForm.playerId}
+                      onChange={(e) => setRetroForm((f) => ({ ...f, playerId: e.target.value }))}
+                      className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground"
+                    >
+                      <option value="">Select…</option>
+                      {players.filter((p) => p.onboardingComplete).map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.vikingName || `Player ${p.id}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-muted block mb-0.5">Km run</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={retroForm.kmRun}
+                      onChange={(e) => setRetroForm((f) => ({ ...f, kmRun: e.target.value }))}
+                      className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-muted block mb-0.5">Runs</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={retroForm.runsCount}
+                      onChange={(e) => setRetroForm((f) => ({ ...f, runsCount: e.target.value }))}
+                      className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-muted block mb-0.5">Gym sessions</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={retroForm.gymSessions}
+                      onChange={(e) => setRetroForm((f) => ({ ...f, gymSessions: e.target.value }))}
+                      className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-muted block mb-0.5">2nd challenge # (optional)</label>
+                    <input
+                      type="text"
+                      value={retroForm.secondChallengeResult}
+                      onChange={(e) => setRetroForm((f) => ({ ...f, secondChallengeResult: e.target.value }))}
+                      className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground"
+                      placeholder="e.g. minutes or count"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-muted block mb-0.5">Hype vote for</label>
+                    <select
+                      value={retroForm.hypeVoteFor}
+                      onChange={(e) => setRetroForm((f) => ({ ...f, hypeVoteFor: e.target.value }))}
+                      className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground"
+                    >
+                      <option value="">— none —</option>
+                      {players
+                        .filter((p) => p.onboardingComplete && String(p.id) !== retroForm.playerId)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.vikingName || `Player ${p.id}`}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="col-span-2 flex flex-wrap items-center gap-4 mt-1">
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={retroForm.soloChallengeDone}
+                        onChange={(e) => setRetroForm((f) => ({ ...f, soloChallengeDone: e.target.checked }))}
+                      />
+                      <span>Solo challenge done</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={retroForm.isLate}
+                        onChange={(e) => setRetroForm((f) => ({ ...f, isLate: e.target.checked }))}
+                      />
+                      <span>Counted as late (no on-time bonus)</span>
+                    </label>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={addRetroactiveSubmission}
+                  disabled={retroSaving}
+                  className="mt-3 text-xs bg-ice/20 text-ice px-3 py-2 rounded hover:bg-ice/30 disabled:opacity-50"
+                >
+                  {retroSaving ? "Saving…" : "Save retro submission"}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
