@@ -38,9 +38,13 @@ function getRankMessage(rank: number, prevRank: number): string {
 const CARD_HEIGHT = 60;
 const CARD_GAP = 8;
 
+function samePlayerId(a: number, b: number) {
+  return Number(a) === Number(b);
+}
+
 export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: LeaderboardRevealProps) {
   const [phase, setPhase] = useState<"intro" | "old" | "shuffle" | "highlight">("intro");
-  const me = players.find(p => p.playerId === myPlayerId);
+  const me = players.find(p => samePlayerId(p.playerId, myPlayerId));
 
   // Sorted arrays — stable across renders
   const byPrev = useRef(
@@ -124,7 +128,7 @@ export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: Le
               style={{ minHeight: byPrev.length * (CARD_HEIGHT + CARD_GAP) - CARD_GAP }}
             >
               {byPrev.map((p, i) => {
-                const isMe = p.playerId === myPlayerId;
+                const isMe = samePlayerId(p.playerId, myPlayerId);
                 const moved = p.rank !== p.prevRank;
                 const wentUp = p.rank < p.prevRank;
                 const translateY = getTranslateY(p);
@@ -179,12 +183,15 @@ export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: Le
               })}
             </div>
 
-            {phase === "highlight" && me && (
+            {phase === "highlight" && (
               <div className="mt-4 bg-fire/10 border border-fire/30 rounded-lg p-4 text-center animate-[fadeIn_0.6s_ease-out]">
                 <p className="text-sm font-[family-name:var(--font-cinzel)] text-fire leading-relaxed">
-                  {getRankMessage(me.rank, me.prevRank)}
+                  {me
+                    ? getRankMessage(me.rank, me.prevRank)
+                    : "The standings are set. Step into the realm when you are ready."}
                 </p>
                 <button
+                  type="button"
                   onClick={onDismiss}
                   className="mt-4 w-full bg-fire text-background font-[family-name:var(--font-cinzel)] font-bold py-2.5 rounded-lg hover:bg-fire/90 transition-colors text-sm"
                 >

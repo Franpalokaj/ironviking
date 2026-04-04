@@ -182,6 +182,21 @@ export default function DashboardPage() {
     loadData();
   }, [loadData]);
 
+  /** Weekly XP reveal is gated on having a row in `scores`; skip + persist in an effect — never setState during render. */
+  useEffect(() => {
+    if (loading || !showWeeklyReveal || !session || !week || scoredWeekId == null) return;
+    const myScore = scores.find((s) => Number(s.playerId) === Number(session.playerId));
+    if (myScore) return;
+
+    const weeklyKey = `iron-viking-weekly-reveal-${scoredWeekId}`;
+    const lbKey = `iron-viking-lb-reveal-${scoredWeekId}`;
+    localStorage.setItem(weeklyKey, "1");
+    setShowWeeklyReveal(false);
+    if (!localStorage.getItem(lbKey)) {
+      setShowLeaderboardReveal(true);
+    }
+  }, [loading, showWeeklyReveal, session, week, scoredWeekId, scores]);
+
   useEffect(() => {
     if (!week || !session) return;
 
@@ -350,15 +365,11 @@ export default function DashboardPage() {
 
       {/* Weekly XP reveal — shown once per scored week */}
       {showWeeklyReveal && session && week && (() => {
-        const myScore = scores.find(s => s.playerId === session.playerId);
+        const myScore = scores.find(s => Number(s.playerId) === Number(session.playerId));
         const wId = scoredWeekId || week.id;
         const weeklyKey = `iron-viking-weekly-reveal-${wId}`;
         const lbKey = `iron-viking-lb-reveal-${wId}`;
         if (!myScore) {
-          // No personal score — mark weekly as seen and fall through to leaderboard
-          localStorage.setItem(weeklyKey, "1");
-          setShowWeeklyReveal(false);
-          if (!localStorage.getItem(lbKey)) setShowLeaderboardReveal(true);
           return null;
         }
         const prevScore = prevWeekScores.find((s: WeeklyScore) => s.playerId === session.playerId);
