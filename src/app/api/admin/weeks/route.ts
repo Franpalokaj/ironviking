@@ -7,7 +7,7 @@ import { requireAdmin } from "@/lib/auth";
 export async function PATCH(request: NextRequest) {
   try {
     await requireAdmin();
-    const { weekId, soloChallengeId, secondChallengeId } = await request.json();
+    const { weekId, soloChallengeId, secondChallengeId, buddyChallengeId } = await request.json();
 
     if (!weekId) {
       return NextResponse.json({ error: "weekId is required" }, { status: 400 });
@@ -16,6 +16,7 @@ export async function PATCH(request: NextRequest) {
     const updates: Record<string, unknown> = {};
     if (soloChallengeId !== undefined) updates.soloChallengeId = soloChallengeId;
     if (secondChallengeId !== undefined) updates.secondChallengeId = secondChallengeId;
+    if (buddyChallengeId !== undefined) updates.buddyChallengeId = buddyChallengeId;
 
     await db.update(weeks).set(updates).where(eq(weeks.id, weekId));
 

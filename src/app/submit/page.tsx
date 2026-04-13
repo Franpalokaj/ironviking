@@ -36,6 +36,7 @@ export default function SubmitPage() {
   const [week, setWeek] = useState<Week | null>(null);
   const [soloChallenge, setSoloChallenge] = useState<Challenge | null>(null);
   const [secondChallenge, setSecondChallenge] = useState<Challenge | null>(null);
+  const [buddyChallenge, setBuddyChallenge] = useState<Challenge | null>(null);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -50,6 +51,9 @@ export default function SubmitPage() {
   const [soloChallengeDone, setSoloChallengeDone] = useState(false);
   const [secondChallengeResult, setSecondChallengeResult] = useState("");
   const [secondChallengeAttempted, setSecondChallengeAttempted] = useState(false);
+  const [buddyChallengeDone, setBuddyChallengeDone] = useState(false);
+  const [buddyChallengeResult, setBuddyChallengeResult] = useState("");
+  const [buddyTeammateName, setBuddyTeammateName] = useState<string | null>(null);
   const [hypeVoteFor, setHypeVoteFor] = useState<number | null>(null);
   const [hypeVoteMessage, setHypeVoteMessage] = useState("");
   const [draftSaved, setDraftSaved] = useState(false);
@@ -79,12 +83,51 @@ export default function SubmitPage() {
       setWeek(weekData.week);
       setSoloChallenge(weekData.soloChallenge);
       setSecondChallenge(weekData.secondChallenge);
-      setPlayers((playersData.players || []).filter((p: Player) => p.id !== s.playerId));
+      setBuddyChallenge(weekData.buddyChallenge || null);
+      const allPlayers = (playersData.players || []) as (Player & { buddyTeamId?: number | null })[];
+      setPlayers(allPlayers.filter((p) => p.id !== s.playerId));
+
+      // Find buddy teammate name
+      const me = allPlayers.find((p: Player) => p.id === s.playerId) as (Player & { buddyTeamId?: number | null }) | undefined;
+      if (me?.buddyTeamId) {
+        const teammates = allPlayers
+          .filter((p) => p.id !== s.playerId && p.buddyTeamId === me.buddyTeamId)
+          .map((p) => p.vikingName)
+          .filter(Boolean);
+        if (teammates.length > 0) setBuddyTeammateName(teammates.join(" & "));
+      }
 
       if (weekData.week) {
         const subRes = await fetch(`/api/submissions?weekId=${weekData.week.id}`);
         const subData = await subRes.json();
         if (subData.submission) setAlreadySubmitted(true);
+
+        // Auto-populate buddy challenge result from teammate's submission
+        if (weekData.buddyChallenge && me?.buddyTeamId) {
+          const teammateIds = allPlayers
+            .filter((p) => p.id !== s.playerId && p.buddyTeamId === me.buddyTeamId)
+            .map((p) => p.id);
+          for (const tid of teammateIds) {
+            const tRes = await fetch(`/api/submissions/buddy?weekId=${weekData.week.id}&playerId=${tid}`);
+            if (tRes.ok) {
+              const tData = await tRes.json();
+              if (tData.buddyChallengeResult != null) {
+                if (weekData.buddyChallenge.dataType === "time_mmss") {
+                  const totalSec = tData.buddyChallengeResult;
+                  const min = Math.floor(totalSec / 60);
+                  const sec = totalSec % 60;
+                  setBuddyChallengeResult(`${min}:${String(sec).padStart(2, "0")}`);
+                } else {
+                  setBuddyChallengeResult(String(tData.buddyChallengeResult));
+                }
+              }
+              if (tData.buddyChallengeDone) {
+                setBuddyChallengeDone(true);
+              }
+              break;
+            }
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -110,6 +153,8 @@ export default function SubmitPage() {
       if (draft.soloChallengeDone !== undefined) setSoloChallengeDone(draft.soloChallengeDone);
       if (draft.secondChallengeResult !== undefined) setSecondChallengeResult(draft.secondChallengeResult);
       if (draft.secondChallengeAttempted !== undefined) setSecondChallengeAttempted(draft.secondChallengeAttempted);
+      if (draft.buddyChallengeDone !== undefined) setBuddyChallengeDone(draft.buddyChallengeDone);
+      if (draft.buddyChallengeResult !== undefined) setBuddyChallengeResult(draft.buddyChallengeResult);
       if (draft.hypeVoteFor !== undefined) setHypeVoteFor(draft.hypeVoteFor);
       if (draft.hypeVoteMessage !== undefined) setHypeVoteMessage(draft.hypeVoteMessage ?? "");
     } catch { /* ignore */ }
@@ -121,7 +166,9 @@ export default function SubmitPage() {
     const draftKey = `iron-viking-draft-week-${week.id}`;
     const current = {
       kmRun, runsCount, gymSessions, berserkerGym, soloChallengeDone,
-      secondChallengeResult, secondChallengeAttempted, hypeVoteFor, hypeVoteMessage,
+      secondChallengeResult, secondChallengeAttempted,
+      buddyChallengeDone, buddyChallengeResult,
+      hypeVoteFor, hypeVoteMessage,
       ...updates,
     };
     localStorage.setItem(draftKey, JSON.stringify(current));
@@ -155,6 +202,19 @@ export default function SubmitPage() {
         resultValue = secondChallengeAttempted ? 1.0 : null;
       }
 
+      // Buddy challenge result conversion
+      let buddyResultValue: number | null = null;
+      if (buddyChallenge && buddyChallenge.dataType !== "boolean" && buddyChallengeResult) {
+        if (buddyChallenge.dataType === "time_mmss") {
+          const parts = buddyChallengeResult.split(":");
+          if (parts.length === 2) {
+            buddyResultValue = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+          }
+        } else {
+          buddyResultValue = parseFloat(buddyChallengeResult);
+        }
+      }
+
       const runKm = parseFloat(kmRun) || 0;
       const mtbKmVal = parseFloat(mtbKm) || 0;
       const hikingKmVal = parseFloat(hikingKm) || 0;
@@ -181,6 +241,8 @@ export default function SubmitPage() {
           soloChallengeDone,
           secondChallengeResult: resultValue,
           secondChallengeAttempted,
+          buddyChallengeDone,
+          buddyChallengeResult: buddyResultValue,
           hypeVoteFor,
           hypeVoteMessage: hypeVoteMessage.trim() || null,
           mtbKm: mtbKmVal || null,
@@ -601,6 +663,57 @@ export default function SubmitPage() {
                   <div className="text-xs text-muted">
                     Your km from Section 1 counts toward the group target.
                     {secondChallenge.targetValue && ` Target: ${secondChallenge.targetValue} ${secondChallenge.dataType === "distance_km" ? "km" : ""}`}
+                  </div>
+                )}
+              </div>
+            )}
+            {buddyChallenge && (
+              <div className="bg-card border border-gold/20 rounded-lg p-4">
+                <div className="text-xs uppercase tracking-wider text-muted mb-1">🤝 Buddy Challenge</div>
+                {buddyTeammateName && (
+                  <div className="text-xs text-gold mb-2">Your buddy: {buddyTeammateName}</div>
+                )}
+                <div className="font-semibold text-foreground mb-1">{buddyChallenge.title}</div>
+                <p className="text-sm text-muted mb-3">{buddyChallenge.description}</p>
+
+                {buddyChallenge.dataType === "boolean" ? (
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => { setBuddyChallengeDone(true); saveDraft({ buddyChallengeDone: true }); }}
+                      className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
+                        buddyChallengeDone
+                          ? "bg-gold/20 border-gold text-gold"
+                          : "border-card-border text-muted hover:border-gold/30"
+                      }`}
+                    >Yes</button>
+                    <button
+                      type="button"
+                      onClick={() => { setBuddyChallengeDone(false); saveDraft({ buddyChallengeDone: false }); }}
+                      className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
+                        !buddyChallengeDone
+                          ? "bg-card-border/50 border-card-border text-foreground"
+                          : "border-card-border text-muted hover:border-card-border"
+                      }`}
+                    >No</button>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs text-muted mb-1">
+                      Team result
+                      {buddyChallenge.dataType === "time_mmss" && " (mm:ss)"}
+                      {buddyChallenge.dataType === "distance_km" && " (km)"}
+                      {buddyChallenge.dataType === "count" && " (count)"}
+                      {buddyChallenge.dataType === "weight_kg" && " (kg)"}
+                    </label>
+                    <input
+                      type={buddyChallenge.dataType === "time_mmss" ? "text" : "number"}
+                      step={buddyChallenge.dataType === "distance_km" ? "0.1" : "1"}
+                      value={buddyChallengeResult}
+                      onChange={(e) => { setBuddyChallengeResult(e.target.value); saveDraft({ buddyChallengeResult: e.target.value }); }}
+                      className="w-full bg-background border border-card-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:border-gold/50"
+                      placeholder={buddyChallenge.dataType === "time_mmss" ? "2:30" : "0"}
+                    />
                   </div>
                 )}
               </div>

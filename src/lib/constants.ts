@@ -85,9 +85,17 @@ export function getRealmForRank(rank: number): typeof REALMS[number] {
 export const RANK_BONUSES = [30, 22, 16, 10, 5, 2] as const;
 export const COMPETITIVE_BONUSES = [30, 20, 15, 10, 5, 0] as const;
 export const COLLABORATIVE_BONUS = 10;
+
+// Buddy challenge XP = 2× solo/competitive values
+export const BUDDY_DIFFICULTY_POINTS: Record<Difficulty, number> = {
+  normal: 30,
+  hard:   50,
+  epic:   80,
+};
+export const BUDDY_COMPETITIVE_BONUSES = [60, 40, 30, 20, 10, 0] as const;
 export const SOLO_CHALLENGE_BONUS = 15;
 export const SHIELD_BONUS = 8; // kept for reference only; scoring now uses SHIELD_BONUS_PCT
-export const SHIELD_BONUS_PCT = 0.10; // 10% of km points per shield received
+export const SHIELD_BONUS_PCT = 0.05; // 5% of pre-shield raw XP per shield received
 
 export const CONSOLIDATION_WEEKS = [6, 11, 15, 19] as const;
 export const BACKOFF_WEEK = 22;

@@ -21,6 +21,7 @@ export async function GET() {
 
     let soloChallenge = null;
     let secondChallenge = null;
+    let buddyChallenge = null;
 
     if (week.soloChallengeId) {
       const [c] = await db.select().from(challenges).where(eq(challenges.id, week.soloChallengeId)).limit(1);
@@ -30,6 +31,11 @@ export async function GET() {
     if (week.secondChallengeId) {
       const [c] = await db.select().from(challenges).where(eq(challenges.id, week.secondChallengeId)).limit(1);
       secondChallenge = c || null;
+    }
+
+    if (week.buddyChallengeId) {
+      const [c] = await db.select().from(challenges).where(eq(challenges.id, week.buddyChallengeId)).limit(1);
+      buddyChallenge = c || null;
     }
 
     // Find the most recently scored (locked) week for the leaderboard
@@ -72,7 +78,7 @@ export async function GET() {
           .orderBy(desc(weeks.weekNumber))
           .limit(2);
 
-        if (prevScores.length === 2 && prevScores.every(s => s.realmRankWeek === 6)) {
+        if (prevScores.length === 2 && prevScores.every(s => s.realmRankWeek >= 6)) {
           berserkerPlayerIds.push(p.id);
         }
       }
@@ -82,6 +88,7 @@ export async function GET() {
       week,
       soloChallenge,
       secondChallenge,
+      buddyChallenge,
       prevWeekId,
       lastScoredWeek: lastScoredWeek || null,
       berserkerPlayerIds,

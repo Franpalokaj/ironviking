@@ -143,6 +143,7 @@ export async function GET(request: NextRequest) {
         catchUpXpMultiplier: players.catchUpXpMultiplier,
         catchUpStartWeek: players.catchUpStartWeek,
         catchUpEndWeek: players.catchUpEndWeek,
+        buddyTeamId: players.buddyTeamId,
       })
       .from(players);
 

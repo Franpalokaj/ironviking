@@ -27,6 +27,8 @@ import {
   RUN_BONUS,
   GYM_BONUS,
   DIFFICULTY_POINTS,
+  BUDDY_DIFFICULTY_POINTS,
+  BUDDY_COMPETITIVE_BONUSES,
   CONSOLIDATION_WEEKS,
   BACKOFF_WEEK,
   PRE_HOLD_BONUS,
@@ -212,6 +214,71 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
   }
   const groupXpPerPlayer = Object.values(secondPtsMap).find(v => v > 0) ?? 0;
 
+  // STEP 5b: Buddy challenge points
+  let buddyChallenge = null;
+  if (week.buddyChallengeId) {
+    const [c] = await db.select().from(challenges).where(eq(challenges.id, week.buddyChallengeId)).limit(1);
+    buddyChallenge = c;
+  }
+
+  const buddyPtsMap: Record<number, number> = {};
+  for (const p of allPlayers) {
+    buddyPtsMap[p.id] = 0;
+  }
+
+  if (buddyChallenge) {
+    const buddyDiff = (buddyChallenge.difficulty || "normal") as Difficulty;
+
+    if (buddyChallenge.dataType === "boolean") {
+      // Binary buddy challenge: flat XP if done
+      for (const p of allPlayers) {
+        const sub = subsByPlayer[p.id];
+        buddyPtsMap[p.id] = sub?.buddyChallengeDone ? BUDDY_DIFFICULTY_POINTS[buddyDiff] : 0;
+      }
+    } else {
+      // Ranking buddy challenge: group by team, rank teams, award tiered XP
+      const teamResults: Record<number, { teamId: number; result: number | null; playerIds: number[] }> = {};
+
+      for (const p of allPlayers) {
+        const teamId = p.buddyTeamId;
+        if (!teamId) continue;
+        const sub = subsByPlayer[p.id];
+        if (!teamResults[teamId]) {
+          teamResults[teamId] = { teamId, result: null, playerIds: [] };
+        }
+        teamResults[teamId].playerIds.push(p.id);
+        // Take first non-null result from any team member
+        if (teamResults[teamId].result === null && sub?.buddyChallengeResult != null) {
+          teamResults[teamId].result = sub.buddyChallengeResult;
+        }
+      }
+
+      const rankedTeams = Object.values(teamResults)
+        .sort((a, b) => {
+          if (a.result === null && b.result === null) return 0;
+          if (a.result === null) return 1;
+          if (b.result === null) return -1;
+          // For time-based: lower is better; otherwise higher is better
+          if (buddyChallenge!.dataType === "time_mmss") return a.result - b.result;
+          return b.result - a.result;
+        });
+
+      rankedTeams.forEach((team, i) => {
+        if (team.result === null) return;
+        // Tie handling: tied results share the best rank's bonus
+        let tieRank = i;
+        for (let j = i - 1; j >= 0; j--) {
+          if (rankedTeams[j].result === team.result) tieRank = j;
+          else break;
+        }
+        const bonus = BUDDY_COMPETITIVE_BONUSES[Math.min(tieRank, 5)];
+        for (const pid of team.playerIds) {
+          buddyPtsMap[pid] = bonus;
+        }
+      });
+    }
+  }
+
   // STEP 6: Streak bonus — consecutive weekly submissions
   const streakMap: Record<number, number> = {};
   for (const p of allPlayers) {
@@ -245,15 +312,7 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
     streakMap[p.id] = Math.min(streak * STREAK_BONUS_PER_WEEK, STREAK_BONUS_CAP);
   }
 
-  // STEP 7: Shield points — 10% of km points per shield received (scales with effort)
-  const weekVotes = await db.select().from(hypeVotes).where(eq(hypeVotes.weekId, weekId));
-  const shieldMap: Record<number, number> = {};
-  for (const p of allPlayers) {
-    const received = weekVotes.filter((v) => v.receiverId === p.id).length;
-    shieldMap[p.id] = Math.round(kmPointsMap[p.id] * SHIELD_BONUS_PCT * received * 10) / 10;
-  }
-
-  // STEP 8: PR trial bonus
+  // STEP 7: PR trial bonus
   const weekTrials = await db
     .select()
     .from(prTrials)
@@ -278,7 +337,27 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
     forgeMap[p.id] = sub?.berserkerGym ? FORGE_BONUS : 0;
   }
 
-  // STEP 10: Berserker check
+  // STEP 10: Shield points — 5% of pre-shield raw XP per shield received (scales with total effort)
+  const weekVotes = await db.select().from(hypeVotes).where(eq(hypeVotes.weekId, weekId));
+  const shieldMap: Record<number, number> = {};
+  for (const p of allPlayers) {
+    const received = weekVotes.filter((v) => v.receiverId === p.id).length;
+    const preShieldRaw =
+      kmPointsMap[p.id] +
+      runBonusMap[p.id] +
+      gymBonusMap[p.id] +
+      rankBonusMap[p.id] +
+      soloPtsMap[p.id] +
+      secondPtsMap[p.id] +
+      buddyPtsMap[p.id] +
+      streakMap[p.id] +
+      prMap[p.id] +
+      ontimeMap[p.id] +
+      forgeMap[p.id];
+    shieldMap[p.id] = Math.round(preShieldRaw * SHIELD_BONUS_PCT * received * 10) / 10;
+  }
+
+  // STEP 11: Berserker check
   const berserkerMap: Record<number, number> = {};
   for (const p of allPlayers) {
     berserkerMap[p.id] = 1.0;
@@ -299,7 +378,7 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
       .orderBy(desc(weeks.weekNumber))
       .limit(2);
 
-    if (prevScores.length === 2 && prevScores.every((s) => s.weekly_scores.realmRankWeek === 6)) {
+    if (prevScores.length === 2 && prevScores.every((s) => s.weekly_scores.realmRankWeek >= 6)) {
       berserkerMap[p.id] = BERSERKER_MULTIPLIER;
     }
   }
@@ -324,6 +403,7 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
       rankBonusMap[p.id] +
       soloPtsMap[p.id] +
       secondPtsMap[p.id] +
+      buddyPtsMap[p.id] +
       streakMap[p.id] +
       shieldMap[p.id] +
       prMap[p.id] +
@@ -340,6 +420,7 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
       rankBonusMap[p.id] +
       soloPtsMap[p.id] +
       secondPtsMap[p.id] +
+      buddyPtsMap[p.id] +
       streakMap[p.id] +
       shieldMap[p.id] +
       prMap[p.id] +
@@ -385,6 +466,7 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
       rankBonus: rankBonusMap[p.id],
       soloChallengePoints: soloPtsMap[p.id],
       secondChallengePoints: secondPtsMap[p.id],
+      buddyChallengePoints: buddyPtsMap[p.id],
       streakBonus: streakMap[p.id],
       shieldPoints: shieldMap[p.id],
       prBonus: prMap[p.id],

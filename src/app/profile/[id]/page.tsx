@@ -30,6 +30,7 @@ interface Score {
   rankBonus: number;
   soloChallengePoints: number;
   secondChallengePoints: number;
+  buddyChallengePoints: number;
   streakBonus: number;
   shieldPoints: number;
   prBonus: number;
@@ -596,6 +597,7 @@ export default function ProfilePage() {
                   if (s.rankBonus > 0) lines.push({ label: `Rank #${s.realmRankWeek}`, value: s.rankBonus });
                   if (s.soloChallengePoints > 0) lines.push({ label: "Solo challenge", value: s.soloChallengePoints });
                   if (s.secondChallengePoints > 0) lines.push({ label: "Group/comp challenge", value: s.secondChallengePoints });
+                  if (s.buddyChallengePoints > 0) lines.push({ label: "Buddy challenge", value: s.buddyChallengePoints });
                   if (s.streakBonus > 0) lines.push({ label: "Streak", value: s.streakBonus });
                   if (s.shieldPoints > 0) lines.push({ label: "Shield", value: Math.round(s.shieldPoints * 10) / 10 });
                   if (s.prBonus > 0) lines.push({ label: "PR trial", value: s.prBonus });

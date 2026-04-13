@@ -40,6 +40,7 @@ interface WeeklyScore {
   rankBonus: number;
   soloChallengePoints: number;
   secondChallengePoints: number;
+  buddyChallengePoints: number;
   streakBonus: number;
   shieldPoints: number;
   prBonus: number;

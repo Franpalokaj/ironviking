@@ -17,6 +17,7 @@ export async function PATCH(request: NextRequest) {
       catchUpXpMultiplier,
       catchUpStartWeek,
       catchUpEndWeek,
+      buddyTeamId,
     } = body;
 
     if (!playerId) {
@@ -40,6 +41,7 @@ export async function PATCH(request: NextRequest) {
       sigil?: string;
       weeklyKmGoal?: number;
       vikingName?: string;
+      buddyTeamId?: number | null;
       catchUpXpMultiplier?: number;
       catchUpStartWeek?: number | null;
       catchUpEndWeek?: number | null;
@@ -47,6 +49,7 @@ export async function PATCH(request: NextRequest) {
 
     if (sigil !== undefined) patch.sigil = sigil;
     if (weeklyKmGoal !== undefined) patch.weeklyKmGoal = Number(weeklyKmGoal);
+    if (buddyTeamId !== undefined) patch.buddyTeamId = buddyTeamId != null ? Number(buddyTeamId) : null;
     if (vikingName !== undefined) {
       const n = String(vikingName).trim().normalize("NFC");
       if (n) patch.vikingName = n;

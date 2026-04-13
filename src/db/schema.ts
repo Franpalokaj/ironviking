@@ -22,6 +22,7 @@ export const players = pgTable("players", {
   catchUpXpMultiplier: real("catch_up_xp_multiplier").default(1).notNull(),
   catchUpStartWeek: integer("catch_up_start_week"),
   catchUpEndWeek: integer("catch_up_end_week"),
+  buddyTeamId: integer("buddy_team_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -52,6 +53,7 @@ export const weeks = pgTable("weeks", {
   type: text("type").notNull(), // 'competition' or 'collaboration'
   soloChallengeId: integer("solo_challenge_id").references(() => challenges.id),
   secondChallengeId: integer("second_challenge_id").references(() => challenges.id),
+  buddyChallengeId: integer("buddy_challenge_id").references(() => challenges.id),
   isLocked: boolean("is_locked").default(false).notNull(),
 });
 
@@ -59,7 +61,7 @@ export const challenges = pgTable("challenges", {
   id: serial("id").primaryKey(),
   title: text("title").unique().notNull(),
   description: text("description").notNull(),
-  track: text("track").notNull(), // 'solo', 'competitive', 'collaborative'
+  track: text("track").notNull(), // 'solo', 'competitive', 'collaborative', 'buddy'
   dataType: text("data_type"), // 'time_mmss', 'distance_km', 'count', 'weight_kg', 'boolean', null
   targetValue: real("target_value"),
   difficulty: text("difficulty").default("normal").notNull(), // 'normal', 'hard', 'epic'
@@ -80,6 +82,8 @@ export const submissions = pgTable("submissions", {
   soloChallengeDone: boolean("solo_challenge_done").notNull(),
   secondChallengeResult: real("second_challenge_result"),
   secondChallengeAttempted: boolean("second_challenge_attempted").default(false).notNull(),
+  buddyChallengeDone: boolean("buddy_challenge_done").default(false).notNull(),
+  buddyChallengeResult: real("buddy_challenge_result"),
   hypeVoteFor: integer("hype_vote_for").references(() => players.id),
   prTrialResult: real("pr_trial_result"),
   mtbKm: real("mtb_km"),
@@ -159,6 +163,7 @@ export const weeklyScores = pgTable("weekly_scores", {
   forgeBonus: integer("forge_bonus").default(0).notNull(),
   runBonus: integer("run_bonus").default(0).notNull(),
   gymBonus: integer("gym_bonus").default(0).notNull(),
+  buddyChallengePoints: integer("buddy_challenge_pts").default(0).notNull(),
   berserkerMultiplier: real("berserker_multiplier").notNull(),
   catchUpMultiplier: real("catch_up_multiplier").default(1).notNull(),
   totalRaw: real("total_raw").notNull(),

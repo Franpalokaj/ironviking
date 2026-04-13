@@ -23,6 +23,7 @@ interface WeekScore {
   rankBonus: number;
   soloChallengePoints: number;
   secondChallengePoints: number;
+  buddyChallengePoints: number;
   streakBonus: number;
   shieldPoints: number;
   prBonus: number;
@@ -51,6 +52,7 @@ const XP_LINES = [
   { key: "rankBonus",            label: "Realm rank",        icon: "🏆" },
   { key: "soloChallengePoints",  label: "Solo challenge",    icon: "🎯" },
   { key: "secondChallengePoints",label: "Group challenge",   icon: "⚔️" },
+  { key: "buddyChallengePoints", label: "Buddy challenge",   icon: "🤝" },
   { key: "streakBonus",          label: "Streak",            icon: "🔥" },
   { key: "shieldPoints",         label: "Shields received",  icon: "🛡️" },
   { key: "forgeBonus",           label: "Workout XP",         icon: "⚒️" },

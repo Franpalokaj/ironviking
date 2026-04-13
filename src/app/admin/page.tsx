@@ -14,6 +14,7 @@ interface Week {
   type: string;
   soloChallengeId: number | null;
   secondChallengeId: number | null;
+  buddyChallengeId: number | null;
   isLocked: boolean;
 }
 
@@ -83,6 +84,7 @@ export default function AdminPage() {
       catchUpXpMultiplier?: number | null;
       catchUpStartWeek?: number | null;
       catchUpEndWeek?: number | null;
+      buddyTeamId?: number | null;
     }[]
   >([]);
   const [preview, setPreview] = useState<PreviewMode>("none");
@@ -90,6 +92,7 @@ export default function AdminPage() {
   const [editSigil, setEditSigil] = useState("");
   const [editKmGoal, setEditKmGoal] = useState("");
   const [editVikingName, setEditVikingName] = useState("");
+  const [editBuddyTeamId, setEditBuddyTeamId] = useState("");
   const [resetPinPlayerId, setResetPinPlayerId] = useState<number | null>(null);
   const [newPin, setNewPin] = useState("");
   const [resetPinSaving, setResetPinSaving] = useState(false);
@@ -106,6 +109,8 @@ export default function AdminPage() {
     gymSessions: "0",
     soloChallengeDone: false,
     secondChallengeResult: "",
+    buddyChallengeDone: false,
+    buddyChallengeResult: "",
     hypeVoteFor: "",
     isLate: false,
   });
@@ -221,7 +226,7 @@ export default function AdminPage() {
     loadData();
   }
 
-  async function setChallengesForWeek(weekId: number, field: "soloChallengeId" | "secondChallengeId", challengeId: number | null) {
+  async function setChallengesForWeek(weekId: number, field: "soloChallengeId" | "secondChallengeId" | "buddyChallengeId", challengeId: number | null) {
     await fetch("/api/admin/weeks", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -321,6 +326,8 @@ export default function AdminPage() {
           soloChallengeDone: retroForm.soloChallengeDone,
           secondChallengeResult: retroForm.secondChallengeResult === "" ? null : retroForm.secondChallengeResult,
           secondChallengeAttempted: true,
+          buddyChallengeDone: retroForm.buddyChallengeDone,
+          buddyChallengeResult: retroForm.buddyChallengeResult === "" ? null : parseFloat(retroForm.buddyChallengeResult) || null,
           hypeVoteFor: retroForm.hypeVoteFor ? Number(retroForm.hypeVoteFor) : null,
           isLate: retroForm.isLate,
         }),
@@ -395,6 +402,8 @@ export default function AdminPage() {
     if (editSigil) updates.sigil = editSigil;
     if (editKmGoal) updates.weeklyKmGoal = parseFloat(editKmGoal);
     if (editVikingName.trim()) updates.vikingName = editVikingName.trim().normalize("NFC");
+    if (editBuddyTeamId !== "") updates.buddyTeamId = parseInt(editBuddyTeamId);
+    else updates.buddyTeamId = null;
     const res = await fetch("/api/admin/players", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -586,6 +595,7 @@ export default function AdminPage() {
     rankBonus: 16,
     soloChallengePoints: 15,
     secondChallengePoints: 0,
+    buddyChallengePoints: 0,
     streakBonus: 10,
     shieldPoints: 4.2,
     forgeBonus: 0,
@@ -679,6 +689,7 @@ export default function AdminPage() {
             {weeks.map(w => {
               const solo = challenges.find(c => c.id === w.soloChallengeId);
               const second = challenges.find(c => c.id === w.secondChallengeId);
+              const buddy = challenges.find(c => c.id === w.buddyChallengeId);
               return (
                 <div key={w.id} className="bg-card border border-card-border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -718,7 +729,7 @@ export default function AdminPage() {
                       )}
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-3 gap-2 text-xs">
                     <div>
                       <label className="text-muted block mb-1">Solo Challenge</label>
                       <select
@@ -748,6 +759,20 @@ export default function AdminPage() {
                         ))}
                       </select>
                       {second && <span className="text-muted">{second.title}</span>}
+                    </div>
+                    <div>
+                      <label className="text-muted block mb-1">Buddy Challenge</label>
+                      <select
+                        value={w.buddyChallengeId || ""}
+                        onChange={(e) => setChallengesForWeek(w.id, "buddyChallengeId", e.target.value ? Number(e.target.value) : null)}
+                        className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground"
+                      >
+                        <option value="">None</option>
+                        {challenges.filter(c => c.track === "buddy").map(c => (
+                          <option key={c.id} value={c.id}>{c.title}</option>
+                        ))}
+                      </select>
+                      {buddy && <span className="text-muted">{buddy.title}</span>}
                     </div>
                   </div>
                   <div className="mt-2 flex gap-2">
@@ -799,6 +824,7 @@ export default function AdminPage() {
                         setEditSigil(p.sigil || "");
                         setEditKmGoal(p.weeklyKmGoal?.toString() || "");
                         setEditVikingName(p.vikingName || "");
+                        setEditBuddyTeamId(p.buddyTeamId?.toString() || "");
                         setQuestPlayerId(null);
                         setResetPinPlayerId(null);
                         setAddXpPlayerId(null);
@@ -808,7 +834,7 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div className="text-xs text-muted">
-                  Sigil: {p.sigil || "—"} · Weekly goal: {p.weeklyKmGoal ?? "—"} km
+                  Sigil: {p.sigil || "—"} · Weekly goal: {p.weeklyKmGoal ?? "—"} km · Buddy team: {p.buddyTeamId ?? "—"}
                 </div>
                 {Number(p.catchUpXpMultiplier ?? 1) > 1 &&
                   p.catchUpStartWeek != null &&
@@ -1021,7 +1047,7 @@ export default function AdminPage() {
                         placeholder="Name they use to log in"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <div>
                         <label className="text-xs text-muted block mb-1">Sigil</label>
                         <select
@@ -1046,6 +1072,17 @@ export default function AdminPage() {
                           step="0.5"
                         />
                       </div>
+                      <div>
+                        <label className="text-xs text-muted block mb-1">Buddy team</label>
+                        <input
+                          type="number"
+                          value={editBuddyTeamId}
+                          onChange={(e) => setEditBuddyTeamId(e.target.value)}
+                          className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground text-xs"
+                          placeholder="e.g. 1"
+                          step="1"
+                        />
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <button
@@ -1067,7 +1104,7 @@ export default function AdminPage() {
         {/* CHALLENGES TAB */}
         {tab === "challenges" && (
           <div className="space-y-2">
-            {["solo", "competitive", "collaborative"].map(track => (
+            {["solo", "competitive", "collaborative", "buddy"].map(track => (
               <div key={track}>
                 <h3 className="font-[family-name:var(--font-cinzel)] font-bold text-sm text-fire mb-2 capitalize">{track}</h3>
                 {challenges.filter(c => c.track === track).map(c => (
