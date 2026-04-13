@@ -61,7 +61,7 @@ export default function LeaderboardCard({
       }`}
     >
       {buddyTeamName && (
-        <div className="absolute top-2 right-3 text-[10px] text-muted/50 font-[family-name:var(--font-cinzel)]">
+        <div className="absolute top-2 right-3 text-xs text-muted/70 font-[family-name:var(--font-cinzel)]">
           Team {buddyTeamName}
         </div>
       )}
