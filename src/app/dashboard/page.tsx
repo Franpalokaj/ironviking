@@ -9,7 +9,7 @@ import MilestoneCelebration from "@/components/MilestoneCelebration";
 import WeeklyReveal from "@/components/WeeklyReveal";
 import LeaderboardReveal from "@/components/LeaderboardReveal";
 import BottomNav from "@/components/BottomNav";
-import { SIGIL_EMOJIS, type Sigil, getPhaseForWeek, WEEKLY_KM_TARGETS, CONSOLIDATION_WEEKS, BACKOFF_WEEK } from "@/lib/constants";
+import { SIGIL_EMOJIS, type Sigil, getPhaseForWeek, WEEKLY_KM_TARGETS, CONSOLIDATION_WEEKS, BACKOFF_WEEK, BUDDY_TEAM_NAMES } from "@/lib/constants";
 
 interface RevealPlayer {
   playerId: number;
@@ -27,6 +27,7 @@ interface Player {
   sigil: string | null;
   isAdmin: boolean;
   onboardingComplete: boolean;
+  buddyTeamId?: number | null;
 }
 
 interface WeeklyScore {
@@ -292,6 +293,7 @@ export default function DashboardPage() {
                     shieldCount={shieldCounts[p.id] || 0}
                     isBerserker={berserkerIds.includes(p.id)}
                     isSkald={false}
+                    buddyTeamName={p.buddyTeamId ? BUDDY_TEAM_NAMES[p.buddyTeamId] : null}
                   />
                 </div>
               ))}
@@ -325,6 +327,7 @@ export default function DashboardPage() {
                   shieldCount={shieldCounts[score.playerId] || 0}
                   isBerserker={score.berserkerMultiplier > 1}
                   isSkald={false}
+                  buddyTeamName={player.buddyTeamId ? BUDDY_TEAM_NAMES[player.buddyTeamId] : null}
                 />
               </div>
             );
@@ -352,6 +355,7 @@ export default function DashboardPage() {
                 shieldCount={0}
                 isBerserker={false}
                 isSkald={false}
+                buddyTeamName={player.buddyTeamId ? BUDDY_TEAM_NAMES[player.buddyTeamId] : null}
               />
             </div>
           );

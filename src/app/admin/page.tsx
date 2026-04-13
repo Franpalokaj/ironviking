@@ -129,6 +129,10 @@ export default function AdminPage() {
   const [editChallengeTitle, setEditChallengeTitle] = useState("");
   const [editChallengeDesc, setEditChallengeDesc] = useState("");
   const [editChallengeSaving, setEditChallengeSaving] = useState(false);
+  const [newChallForm, setNewChallForm] = useState({
+    title: "", description: "", track: "buddy", dataType: "boolean", difficulty: "normal", phase: "any",
+  });
+  const [newChallSaving, setNewChallSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
@@ -259,6 +263,25 @@ export default function AdminPage() {
       }
     } finally {
       setEditChallengeSaving(false);
+    }
+  }
+
+  async function createChallenge() {
+    if (!newChallForm.title.trim() || !newChallForm.description.trim()) return;
+    setNewChallSaving(true);
+    try {
+      const res = await fetch("/api/challenges", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newChallForm),
+      });
+      if (res.ok) {
+        setNewChallForm({ title: "", description: "", track: "buddy", dataType: "boolean", difficulty: "normal", phase: "any" });
+        await loadData();
+        setMessage("Challenge created.");
+      }
+    } finally {
+      setNewChallSaving(false);
     }
   }
 
@@ -1104,6 +1127,81 @@ export default function AdminPage() {
         {/* CHALLENGES TAB */}
         {tab === "challenges" && (
           <div className="space-y-2">
+            <div className="bg-card border border-fire/20 rounded-lg p-4 mb-4">
+              <h3 className="font-[family-name:var(--font-cinzel)] font-bold text-sm text-fire mb-3">Add Challenge</h3>
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={newChallForm.title}
+                  onChange={e => setNewChallForm({ ...newChallForm, title: e.target.value })}
+                  placeholder="Title"
+                  className="w-full bg-background border border-card-border rounded px-2 py-1.5 text-foreground text-xs"
+                />
+                <textarea
+                  value={newChallForm.description}
+                  onChange={e => setNewChallForm({ ...newChallForm, description: e.target.value })}
+                  placeholder="Description"
+                  rows={2}
+                  className="w-full bg-background border border-card-border rounded px-2 py-1.5 text-foreground text-xs resize-y"
+                />
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <label className="text-[10px] text-muted block mb-0.5">Track</label>
+                    <select
+                      value={newChallForm.track}
+                      onChange={e => setNewChallForm({ ...newChallForm, track: e.target.value })}
+                      className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground text-xs"
+                    >
+                      {["solo", "competitive", "collaborative", "buddy"].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted block mb-0.5">Data type</label>
+                    <select
+                      value={newChallForm.dataType}
+                      onChange={e => setNewChallForm({ ...newChallForm, dataType: e.target.value })}
+                      className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground text-xs"
+                    >
+                      {["boolean", "time_mmss", "distance_km", "count", "weight_kg"].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted block mb-0.5">Difficulty</label>
+                    <select
+                      value={newChallForm.difficulty}
+                      onChange={e => setNewChallForm({ ...newChallForm, difficulty: e.target.value })}
+                      className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground text-xs"
+                    >
+                      {["normal", "hard", "epic"].map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted block mb-0.5">Phase</label>
+                    <select
+                      value={newChallForm.phase}
+                      onChange={e => setNewChallForm({ ...newChallForm, phase: e.target.value })}
+                      className="w-full bg-background border border-card-border rounded px-2 py-1 text-foreground text-xs"
+                    >
+                      {["any", "foundation", "building", "peak", "taper"].map(p => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <button
+                  onClick={createChallenge}
+                  disabled={newChallSaving || !newChallForm.title.trim() || !newChallForm.description.trim()}
+                  className="bg-fire text-background text-xs font-bold px-4 py-1.5 rounded disabled:opacity-40"
+                >{newChallSaving ? "Creating…" : "Create Challenge"}</button>
+              </div>
+            </div>
+
             {["solo", "competitive", "collaborative", "buddy"].map(track => (
               <div key={track}>
                 <h3 className="font-[family-name:var(--font-cinzel)] font-bold text-sm text-fire mb-2 capitalize">{track}</h3>

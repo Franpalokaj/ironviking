@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const session = await requireSession();
     const body = await request.json();
 
-    const { title, description, track, dataType, targetValue, phase } = body;
+    const { title, description, track, dataType, targetValue, phase, difficulty } = body;
 
     if (!title || !description || !track || !phase) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
         dataType: dataType || null,
         targetValue: targetValue || null,
         phase,
+        difficulty: difficulty || "normal",
         submittedBy: session.playerId,
         used: false,
       })

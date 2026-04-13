@@ -99,7 +99,14 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
 
   const rankMap: Record<number, number> = {};
   ranked.forEach((r, i) => {
-    rankMap[r.playerId] = i + 1;
+    // Tie handling: players with identical stats share the same rank
+    let tieRank = i;
+    for (let j = i - 1; j >= 0; j--) {
+      if (ranked[j].km === r.km && ranked[j].runs === r.runs && ranked[j].gym === r.gym) {
+        tieRank = j;
+      } else break;
+    }
+    rankMap[r.playerId] = tieRank + 1;
   });
 
   // STEP 4: Rank bonus

@@ -124,6 +124,12 @@ export const KM_XP_RATE = 1.25;      // XP per group km run (pool = totalGroupKm
 export const RUN_BONUS = 10;          // flat XP per run logged (no cap)
 export const GYM_BONUS = 10;          // flat XP per gym session logged (no cap)
 
+export const BUDDY_TEAM_NAMES: Record<number, string> = {
+  1: "Oer Camp",
+  2: "JonKaj",
+  3: "Nameless",
+};
+
 export const SIGILS = [
   "wolf", "raven", "bear", "serpent", "dragon",
   "axe", "shield", "longship", "crown", "skull",

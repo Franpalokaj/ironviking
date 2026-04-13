@@ -16,6 +16,7 @@ interface Props {
   shieldCount: number;
   isBerserker: boolean;
   isSkald: boolean;
+  buddyTeamName?: string | null;
 }
 
 const RANK_BORDER_COLORS: Record<number, string> = {
@@ -45,6 +46,7 @@ export default function LeaderboardCard({
   shieldCount,
   isBerserker,
   isSkald,
+  buddyTeamName,
 }: Props) {
   const realm = getRealmForRank(rank);
   const borderColor = RANK_BORDER_COLORS[rank] || "border-card-border";
@@ -58,6 +60,11 @@ export default function LeaderboardCard({
         isBerserker ? "border-fire/50 berserker-card-glow" : `${borderColor} ${glow}`
       }`}
     >
+      {buddyTeamName && (
+        <div className="absolute top-2 right-3 text-[10px] text-muted/50 font-[family-name:var(--font-cinzel)]">
+          Team {buddyTeamName}
+        </div>
+      )}
       {isBerserker && (
         <>
           <span className="berserker-ember-2" />
