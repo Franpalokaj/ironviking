@@ -16,12 +16,15 @@ interface Props {
   challenge: Challenge;
   weekType: "competition" | "collaboration";
   isSolo?: boolean;
+  isBuddy?: boolean;
 }
 
-export default function ChallengeCard({ challenge, weekType, isSolo }: Props) {
-  const icon = isSolo ? "🎯" : weekType === "competition" ? "⚔️" : "🛡️";
-  const label = isSolo ? "Solo Challenge" : weekType === "competition" ? "Competitive Challenge" : "Team Challenge";
-  const tint = isSolo
+export default function ChallengeCard({ challenge, weekType, isSolo, isBuddy }: Props) {
+  const icon = isBuddy ? "🤝" : isSolo ? "🎯" : weekType === "competition" ? "⚔️" : "🛡️";
+  const label = isBuddy ? "Buddy Challenge" : isSolo ? "Solo Challenge" : weekType === "competition" ? "Competitive Challenge" : "Team Challenge";
+  const tint = isBuddy
+    ? "border-gold/30 bg-gold/5"
+    : isSolo
     ? "border-fire/20"
     : weekType === "competition"
     ? "border-fire/30 bg-fire/5"

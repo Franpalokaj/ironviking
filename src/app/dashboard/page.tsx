@@ -85,6 +85,7 @@ export default function DashboardPage() {
   const [week, setWeek] = useState<Week | null>(null);
   const [soloChallenge, setSoloChallenge] = useState<Challenge | null>(null);
   const [secondChallenge, setSecondChallenge] = useState<Challenge | null>(null);
+  const [buddyChallenge, setBuddyChallenge] = useState<Challenge | null>(null);
   const [scores, setScores] = useState<WeeklyScore[]>([]);
   const [monthlyScores, setMonthlyScores] = useState<MonthlyScore[]>([]);
   const [alltimeScores, setAlltimeScores] = useState<MonthlyScore[]>([]);
@@ -125,6 +126,7 @@ export default function DashboardPage() {
       setWeek(weekData.week);
       setSoloChallenge(weekData.soloChallenge);
       setSecondChallenge(weekData.secondChallenge);
+      setBuddyChallenge(weekData.buddyChallenge || null);
       setPlayers(playersData.players || []);
       setBerserkerIds(weekData.berserkerPlayerIds || []);
 
@@ -588,7 +590,10 @@ export default function DashboardPage() {
               {secondChallenge && week && (
                 <ChallengeCard challenge={secondChallenge} weekType={week.type as "competition" | "collaboration"} />
               )}
-              {!soloChallenge && !secondChallenge && (
+              {buddyChallenge && week && (
+                <ChallengeCard challenge={buddyChallenge} weekType={week.type as "competition" | "collaboration"} isBuddy />
+              )}
+              {!soloChallenge && !secondChallenge && !buddyChallenge && (
                 <div className="text-center text-muted text-sm py-4">
                   No challenges set for this week yet.
                 </div>
