@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { SIGIL_EMOJIS, type Sigil, getTitleForXP, getNextTitle, TITLE_STYLES, BENCHMARK_DEFINITIONS, calculateBenchmarkXP } from "@/lib/constants";
-import XPProgressBar from "@/components/XPProgressBar";
-import RealmBadge from "@/components/RealmBadge";
+import { getTitleForXP, getNextTitle, TITLE_STYLES, BENCHMARK_DEFINITIONS, calculateBenchmarkXP } from "@/lib/constants";
+import LeaderboardCard from "@/components/LeaderboardCard";
 import BottomNav from "@/components/BottomNav";
 
 interface PlayerData {
@@ -254,28 +253,20 @@ export default function ProfilePage() {
       </header>
 
       <div className="max-w-lg mx-auto px-4 py-6">
-        {/* Player header */}
-        <div className="text-center mb-6">
-          <div className="text-6xl mb-3">{SIGIL_EMOJIS[(player.sigil || "axe") as Sigil]}</div>
-          <h2 className="text-2xl font-[family-name:var(--font-cinzel)] font-bold text-foreground">
-            {player.vikingName}
-          </h2>
-          <div className={`mt-1 font-[family-name:var(--font-cinzel)] ${titleStyle.color} ${titleStyle.glowClass || ""}`}>
-            <span className="mr-1">{titleStyle.icon}</span>
-            <span className="mr-1 opacity-50 text-xs">{titleStyle.rune}</span>
-            {title.name}
-            <span className="text-muted text-sm ml-2">— {title.description}</span>
-          </div>
-          <div className="mt-2"><RealmBadge rank={latestRank} /></div>
-        </div>
-
-        {/* XP bar */}
-        <div className="bg-card border border-card-border rounded-lg p-4 mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gold font-[family-name:var(--font-cinzel)] font-bold">{Math.round(xp)} XP</span>
-            {next && <span className="text-xs text-muted">{Math.round(next.threshold - xp)} to {next.name}</span>}
-          </div>
-          <XPProgressBar xp={xp} />
+        {/* Player card */}
+        <div className="mb-4">
+          <LeaderboardCard
+            vikingName={player.vikingName}
+            sigil={player.sigil || "axe"}
+            title={title.name}
+            rank={latestRank}
+            weekPoints={scores[0]?.totalFinal || 0}
+            xp={xp}
+            hasSubmitted={true}
+            shieldCount={stats.shieldsReceived}
+            isBerserker={false}
+            isSkald={false}
+          />
         </div>
 
         {/* Stats grid */}

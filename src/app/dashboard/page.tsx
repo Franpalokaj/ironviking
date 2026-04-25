@@ -9,7 +9,8 @@ import MilestoneCelebration from "@/components/MilestoneCelebration";
 import WeeklyReveal from "@/components/WeeklyReveal";
 import LeaderboardReveal from "@/components/LeaderboardReveal";
 import BottomNav from "@/components/BottomNav";
-import { SIGIL_EMOJIS, type Sigil, getPhaseForWeek, WEEKLY_KM_TARGETS, CONSOLIDATION_WEEKS, BACKOFF_WEEK, BUDDY_TEAM_NAMES } from "@/lib/constants";
+import Image from "next/image";
+import { SIGIL_IMAGES, TITLE_IMAGES, REALM_IMAGES, getPhaseForWeek, WEEKLY_KM_TARGETS, CONSOLIDATION_WEEKS, BACKOFF_WEEK, BUDDY_TEAM_NAMES } from "@/lib/constants";
 
 interface RevealPlayer {
   playerId: number;
@@ -105,6 +106,35 @@ export default function DashboardPage() {
   const [berserkerIds, setBerserkerIds] = useState<number[]>([]);
   const [shieldMessagesByPlayer, setShieldMessagesByPlayer] = useState<Record<number, { giverName: string; message: string | null }[]>>({});
 
+  const preloadImages = useCallback(() => {
+    const srcs = [
+      "/images/ui/backgrounds/app-background.png",
+      "/images/ui/backgrounds/card-bg-1.png",
+      "/images/ui/backgrounds/card-bg-2.png",
+      "/images/ui/dividers/long.png",
+      "/images/ui/decorators/knot-left.png",
+      "/images/ui/decorators/knot-right.png",
+      "/images/ui/buttons/submit-week.png",
+      "/images/ui/buttons/secondary.png",
+      "/images/ui/name/iron-viking.png",
+      ...Object.values(SIGIL_IMAGES),
+      ...Array.from({ length: 10 }, (_, i) => `/images/ui/digits/${i}.png`),
+      ...Object.values(TITLE_IMAGES),
+      ...Object.values(REALM_IMAGES),
+    ];
+    return Promise.all(
+      srcs.map(
+        (src) =>
+          new Promise<void>((resolve) => {
+            const img = new window.Image();
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+            img.src = src;
+          })
+      )
+    );
+  }, []);
+
   const loadData = useCallback(async () => {
     try {
       const sessionRes = await fetch("/api/auth/session");
@@ -177,14 +207,12 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error("Failed to load dashboard:", err);
-    } finally {
-      setLoading(false);
     }
   }, [router]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    Promise.all([loadData(), preloadImages()]).then(() => setLoading(false));
+  }, [loadData, preloadImages]);
 
   /** Weekly XP reveal is gated on having a row in `scores`; skip + persist in an effect — never setState during render. */
   useEffect(() => {
@@ -292,6 +320,7 @@ export default function DashboardPage() {
                     weekPoints={0}
                     xp={0}
                     hasSubmitted={submittedIds.includes(p.id)}
+                    currentWeekSubmitted={currentWeekSubmittedIds.includes(p.id)}
                     shieldCount={shieldCounts[p.id] || 0}
                     isBerserker={berserkerIds.includes(p.id)}
                     isSkald={false}
@@ -302,7 +331,7 @@ export default function DashboardPage() {
             {players.filter((p) => !p.onboardingComplete).map((_, i) => (
               <div key={`pending-${i}`} className="bg-card border border-card-border rounded-lg p-4 opacity-50">
                 <div className="flex items-center gap-3">
-                  <div className="text-3xl opacity-30">👤</div>
+                  <div className="text-3xl opacity-30 text-muted">—</div>
                   <div className="text-muted italic">Awaiting summons...</div>
                 </div>
               </div>
@@ -326,6 +355,7 @@ export default function DashboardPage() {
                   weekPoints={score.totalFinal}
                   xp={score.xpTotalAfter}
                   hasSubmitted={submittedIds.includes(score.playerId)}
+                  currentWeekSubmitted={currentWeekSubmittedIds.includes(score.playerId)}
                   shieldCount={shieldCounts[score.playerId] || 0}
                   isBerserker={score.berserkerMultiplier > 1}
                   isSkald={false}
@@ -439,11 +469,17 @@ export default function DashboardPage() {
         );
       })()}
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-card-border">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-[family-name:var(--font-cinzel)] font-bold text-fire">
-            Iron Viking
-          </h1>
+      <header className="relative z-40 bg-background/35">
+        <div className="max-w-lg mx-auto px-4 flex items-center justify-between relative" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
+          <div className="w-10" />
+          <Image
+            unoptimized
+            src="/images/ui/name/iron-viking.png"
+            alt="Iron Viking"
+            width={180}
+            height={60}
+            className="h-[60px] w-auto" style={{ marginLeft: "8%" }}
+          />
           <div className="flex items-center gap-3">
             {session?.isAdmin && (
               <button
@@ -455,34 +491,58 @@ export default function DashboardPage() {
             )}
             <button
               onClick={() => router.push(`/profile/${session?.playerId}`)}
-              className="text-xl"
+              className="flex items-center"
             >
-              {session ? SIGIL_EMOJIS[(players.find(p => p.id === session.playerId)?.sigil || "axe") as Sigil] : "⚔️"}
+              <Image
+                unoptimized
+                src={SIGIL_IMAGES[players.find(p => p.id === session?.playerId)?.sigil || "axe"] || SIGIL_IMAGES["axe"]}
+                alt="Profile"
+                width={28}
+                height={28}
+              />
             </button>
           </div>
         </div>
       </header>
+      <div style={{ marginTop: "-7px" }} className="relative z-40">
+        <Image unoptimized src="/images/ui/dividers/long.png" alt="" width={2000} height={12} className="w-full h-auto opacity-60" />
+      </div>
 
-      <div className="max-w-lg mx-auto px-4">
-        {/* Countdown */}
-        <Countdown />
+      <div className="max-w-lg mx-auto px-4" style={{ marginTop: "-25px" }}>
+        {/* Countdown with background circle positioned behind */}
+        <div className="relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/ui/backgrounds/app-background.png"
+            alt=""
+            draggable={false}
+            className="bg-circle"
+          />
+          <div className="relative z-10">
+            <Countdown />
+          </div>
+        </div>
 
-        <div className="rune-divider my-4" />
+        <div className="flex justify-center" style={{ marginTop: "-8px", marginBottom: "21px" }}>
+          <Image unoptimized src="/images/ui/dividers/long.png" alt="" width={300} height={12} className="opacity-60" />
+        </div>
 
         {/* Week info */}
         {week && (
-          <div className="text-center mb-4">
-            <div className="text-lg font-[family-name:var(--font-cinzel)] font-bold text-foreground">
-              Week {week.weekNumber} · {phase?.name}
+          <div className="text-center mb-1">
+            <div className="flex items-center justify-center gap-3">
+              <Image unoptimized src="/images/ui/decorators/knot-left.png" alt="" width={18} height={18} className="opacity-40" />
+              <span className="text-lg font-[family-name:var(--font-cinzel)] font-bold text-foreground">
+                Week {week.weekNumber} · {phase?.name}
+              </span>
+              <Image unoptimized src="/images/ui/decorators/knot-right.png" alt="" width={18} height={18} className="opacity-40" />
             </div>
-            {kmTarget && (
-              <div className="text-2xl font-bold text-fire mt-1">{kmTarget.min} km</div>
-            )}
-            <div className="text-xs text-muted mt-1">
-              {week.type === "competition" ? "⚔️ Competition Week" : "🛡️ Collaboration Week"}
+            <div className="text-base text-muted mt-1">
+              {week.type === "competition" ? "Competition Week" : "Collaboration Week"}
+              {kmTarget && <> · Goal {kmTarget.min} km</>}
             </div>
             {/* Stack banner above schedule link (inline-flex + button were sitting side-by-side in text-center) */}
-            <div className="mt-3 flex flex-col items-center gap-3 w-full">
+            <div style={{ marginTop: "19px" }} className="flex flex-col items-center gap-4 w-full">
               {(() => {
                 const wn = week.weekNumber;
                 const isHold = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn) || wn === BACKOFF_WEEK;
@@ -490,7 +550,7 @@ export default function DashboardPage() {
                 if (isHold) {
                   return (
                     <div className="flex w-full max-w-md items-center gap-2 bg-ice/10 border border-ice/30 rounded-lg px-4 py-2 animate-[fadeIn_0.6s_ease-out]">
-                      <span className="text-sm shrink-0">❄️</span>
+                      <span className="text-sm shrink-0 text-ice font-bold">*</span>
                       <div className="text-left min-w-0">
                         <div className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-ice">Consolidation Week</div>
                         <div className="text-[10px] text-muted">XP this week is reduced by 25% — rest, recover, hold your gains.</div>
@@ -501,7 +561,7 @@ export default function DashboardPage() {
                 if (isPreHold) {
                   return (
                     <div className="flex w-full max-w-md items-center gap-2 bg-gold/10 border border-gold/30 rounded-lg px-4 py-2 animate-[fadeIn_0.6s_ease-out]">
-                      <span className="text-sm shrink-0">⚡</span>
+                      <span className="text-sm shrink-0 text-gold font-bold">*</span>
                       <div className="text-left min-w-0">
                         <div className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-gold">Last Push</div>
                         <div className="text-[10px] text-muted">XP this week is boosted by 50% — hold week follows. Go hard.</div>
@@ -514,7 +574,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => router.push("/guide")}
-                className="text-xs text-muted hover:text-fire underline underline-offset-2 transition-colors"
+                className="text-sm text-muted hover:text-fire underline underline-offset-2 transition-colors"
               >
                 View full training schedule →
               </button>
@@ -522,43 +582,31 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Submission status — who has submitted for the current running week */}
-        <div className="flex justify-center gap-2 mb-6">
-          {players.filter(p => p.onboardingComplete).map((p) => {
-            const submitted = currentWeekSubmittedIds.includes(p.id);
-            return (
-              <div
-                key={p.id}
-                className={`flex flex-col items-center gap-1 ${submitted ? "opacity-100" : "opacity-60"}`}
-                title={`${p.vikingName} — ${submitted ? "Submitted" : "Pending"}`}
-              >
-                <span className="text-lg">
-                  {SIGIL_EMOJIS[(p.sigil || "axe") as Sigil]}
-                </span>
-                <span className="text-[10px]">{submitted ? "✓" : "🔥"}</span>
-              </div>
-            );
-          })}
-        </div>
-
         {/* Submit CTA */}
         {!hasSubmitted && week && !week.isLocked && (
           <button
             onClick={() => router.push("/submit")}
-            className="w-full bg-fire text-background font-[family-name:var(--font-cinzel)] font-bold py-4 rounded-lg mb-6 hover:bg-fire/90 transition-colors text-lg"
+            className="w-full mb-1 hover:opacity-90 transition-opacity"
           >
-            Submit Your Week
+            <Image
+              unoptimized
+              src="/images/ui/buttons/submit-week.png"
+              alt="Submit Your Week"
+              width={400}
+              height={60}
+              className="w-full h-auto"
+            />
           </button>
         )}
 
         {hasSubmitted && (
-          <div className="text-center text-sm text-muted mb-6 flex items-center justify-center gap-2">
-            <span>✓</span> Your scroll has been submitted
+          <div className="text-center text-sm text-muted mb-1 flex items-center justify-center gap-2">
+            Your scroll has been submitted
           </div>
         )}
 
         {/* Leaderboard view toggle */}
-        <div className="flex rounded-lg border border-card-border overflow-hidden mb-4">
+        <div className="flex rounded-lg border border-gold/30 overflow-hidden mb-4">
           {(["week", "month", "alltime"] as LeaderboardView[]).map((v) => (
             <button
               key={v}
@@ -575,7 +623,9 @@ export default function DashboardPage() {
         {/* Leaderboard */}
         {renderLeaderboard()}
 
-        <div className="rune-divider my-6" />
+        <div className="flex justify-center my-6">
+          <Image unoptimized src="/images/ui/dividers/long.png" alt="" width={300} height={12} className="opacity-60" />
+        </div>
 
         {/* Active challenges -- only shown for weekly view */}
         {view === "week" && (
@@ -603,18 +653,24 @@ export default function DashboardPage() {
         )}
 
         {/* Nav links */}
-        <div className="grid grid-cols-2 gap-3 mb-8">
+        <div className="flex gap-4 mb-8">
           <button
             onClick={() => router.push("/challenges")}
-            className="bg-card border border-card-border rounded-lg p-3 text-center text-sm text-muted hover:text-foreground hover:border-fire/30 transition-colors"
+            className="relative hover:opacity-90 transition-opacity flex-1"
           >
-            Challenge Board
+            <Image unoptimized src="/images/ui/buttons/secondary.png" alt="" width={400} height={133} className="w-full h-auto" />
+            <span className="absolute inset-0 flex items-center justify-center text-base font-[family-name:var(--font-cinzel)] font-semibold text-foreground">
+              Challenge Board
+            </span>
           </button>
           <button
             onClick={() => router.push("/guide")}
-            className="bg-card border border-card-border rounded-lg p-3 text-center text-sm text-muted hover:text-foreground hover:border-fire/30 transition-colors"
+            className="relative hover:opacity-90 transition-opacity flex-1"
           >
-            Training Guide
+            <Image unoptimized src="/images/ui/buttons/secondary.png" alt="" width={400} height={133} className="w-full h-auto" />
+            <span className="absolute inset-0 flex items-center justify-center text-base font-[family-name:var(--font-cinzel)] font-semibold text-foreground">
+              Training Guide
+            </span>
           </button>
         </div>
       </div>

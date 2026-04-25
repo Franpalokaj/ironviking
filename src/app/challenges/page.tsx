@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import BottomNav from "@/components/BottomNav";
 
 interface Challenge {
@@ -82,12 +83,6 @@ export default function ChallengesPage() {
     );
   }
 
-  const trackIcon = (track: string) => {
-    if (track === "solo") return "🎯";
-    if (track === "competitive") return "⚔️";
-    return "🛡️";
-  };
-
   return (
     <div className="min-h-dvh pb-24">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-card-border">
@@ -165,24 +160,33 @@ export default function ChallengesPage() {
         )}
 
         {/* Challenge list */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           {filtered.map(c => (
             <div
               key={c.id}
-              className={`bg-card border rounded-lg p-3 ${
-                c.used ? "border-card-border opacity-60" : "border-card-border"
-              }`}
+              className={`relative overflow-hidden p-4 ${c.used ? "opacity-60" : ""}`}
+              style={{
+                backgroundImage: "url(/images/ui/backgrounds/card-bg-2.png)",
+                backgroundSize: "100% 100%",
+                backgroundRepeat: "no-repeat",
+                aspectRatio: "800 / 429",
+              }}
             >
-              <div className="flex items-center gap-2 mb-1">
-                <span>{trackIcon(c.track)}</span>
-                <span className="font-semibold text-sm text-foreground">{c.title}</span>
-                {c.used && <span className="text-[10px] text-muted bg-card-border rounded px-1">Used</span>}
-              </div>
-              <p className="text-xs text-muted">{c.description}</p>
-              <div className="text-[10px] text-muted mt-1">
-                {c.phase} · {c.dataType || "boolean"}
-                {c.targetValue ? ` · Target: ${c.targetValue}` : ""}
-                {c.submittedBy ? " · Player submitted" : ""}
+              <div className="relative z-10 flex flex-col items-center justify-center h-full text-center" style={{ marginTop: "-6%" }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm uppercase tracking-wider text-muted font-semibold">
+                    {c.track === "solo" ? "Solo" : c.track === "competitive" ? "Competitive" : "Collaborative"}
+                  </span>
+                  {c.used && <span className="text-[10px] text-muted bg-card-border rounded px-1.5 py-0.5">Used</span>}
+                </div>
+                <h4 className="font-[family-name:var(--font-cinzel)] font-bold text-foreground text-2xl">
+                  {c.title}
+                </h4>
+                <p className="text-base text-muted mt-2 break-words max-w-[80%]">{c.description}</p>
+                <div className="text-xs text-muted mt-2">
+                  {c.phase} · {c.dataType || "boolean"}
+                  {c.targetValue ? ` · Target: ${c.targetValue}` : ""}
+                </div>
               </div>
             </div>
           ))}

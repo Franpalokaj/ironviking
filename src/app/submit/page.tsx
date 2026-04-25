@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { SIGIL_EMOJIS, type Sigil, getPhaseForWeek, WEEKLY_KM_TARGETS, getWeekDeadline, ACTIVITY_MULTIPLIERS } from "@/lib/constants";
+import Image from "next/image";
+import { SIGIL_IMAGES, getPhaseForWeek, WEEKLY_KM_TARGETS, getWeekDeadline, ACTIVITY_MULTIPLIERS } from "@/lib/constants";
 import BottomNav from "@/components/BottomNav";
 
 interface Player {
@@ -290,8 +291,7 @@ export default function SubmitPage() {
         <div className="text-center max-w-sm animate-[fadeIn_0.6s_ease-out]">
           {/* Ember particles background feel */}
           <div className="relative inline-block mb-6">
-            <div className="text-8xl animate-[ember_2s_ease-in-out_infinite]">⚔️</div>
-            <div className="absolute inset-0 blur-xl opacity-40 text-8xl">⚔️</div>
+            <div className="text-4xl font-[family-name:var(--font-cinzel)] font-bold text-fire animate-pulse tracking-widest">SEALED</div>
           </div>
           <h2 className="text-3xl font-[family-name:var(--font-cinzel)] font-bold text-fire mb-3">
             Your Deeds Are Recorded
@@ -303,7 +303,9 @@ export default function SubmitPage() {
             Week {week?.weekNumber} scroll sealed.
           </p>
           {error && <p className="text-yellow-400 text-sm mb-4">{error}</p>}
-          <div className="rune-divider my-6" />
+          <div className="flex justify-center my-8">
+            <Image unoptimized src="/images/ui/dividers/long.png" alt="" width={300} height={12} className="opacity-60" />
+          </div>
           <p className="text-xs text-muted mb-6 italic">
             &ldquo;Not the strength, but the constancy of effort is what wins the war.&rdquo;
           </p>
@@ -322,7 +324,7 @@ export default function SubmitPage() {
     return (
       <div className="min-h-dvh flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
-          <div className="text-5xl mb-4">📜</div>
+          <div className="text-2xl font-[family-name:var(--font-cinzel)] font-bold text-gold mb-4">RECORDED</div>
           <h2 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-foreground mb-2">
             Already Submitted
           </h2>
@@ -374,10 +376,10 @@ export default function SubmitPage() {
         {/* SECTION 1: Training */}
         <section>
           <h2 className="text-lg font-[family-name:var(--font-cinzel)] font-bold mb-4 flex items-center gap-2">
-            <span>🏃</span> Training This Week
+            Training This Week
           </h2>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
               <label className="block text-sm text-muted mb-1">Total km run this week</label>
               <div className="flex items-center gap-2">
@@ -431,21 +433,16 @@ export default function SubmitPage() {
               <button
                 type="button"
                 onClick={() => { setBerserkerGym(!berserkerGym); saveDraft({ berserkerGym: !berserkerGym }); }}
-                className={`mt-2 w-full flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                className={`mt-4 w-full flex items-center justify-between gap-2 rounded-lg border px-3 py-3 text-left text-sm transition-colors ${
                   berserkerGym ? "border-fire bg-fire/10 text-fire" : "border-card-border bg-card text-muted hover:border-fire/30"
                 }`}
               >
-                <span className="font-[family-name:var(--font-cinzel)] font-semibold">⚒️ Berserker&apos;s Forge</span>
+                <span className="font-[family-name:var(--font-cinzel)] font-semibold">Berserker&apos;s Forge</span>
                 <span className="text-xs">{berserkerGym ? "+15 XP" : "Tag a hard battle"}</span>
               </button>
-              <p className="text-[10px] text-muted mt-1">One session was a proper forge — counts 50% more.</p>
+              <p className="text-[10px] text-muted mt-1 mb-2">One session was a proper forge — counts 50% more.</p>
             </div>
 
-            {kmTarget && (
-              <div className="text-xs text-muted bg-card border border-card-border rounded-lg p-3">
-                Recommended this week: {kmTarget.min} km · {phase?.name}
-              </div>
-            )}
 
             {/* Other Activities */}
             <div>
@@ -472,7 +469,7 @@ export default function SubmitPage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs text-muted mb-1">🚵 MTB (km × 0.35)</label>
+                      <label className="block text-xs text-muted mb-1">MTB (km × 0.35)</label>
                       <input
                         type="number" step="0.1" min="0" value={mtbKm}
                         onChange={(e) => { setMtbKm(e.target.value); saveDraft({ mtbKm: e.target.value }); }}
@@ -481,7 +478,7 @@ export default function SubmitPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-muted mb-1">🥾 Hiking (km × 0.45)</label>
+                      <label className="block text-xs text-muted mb-1">Hiking (km × 0.45)</label>
                       <input
                         type="number" step="0.1" min="0" value={hikingKm}
                         onChange={(e) => { setHikingKm(e.target.value); saveDraft({ hikingKm: e.target.value }); }}
@@ -490,7 +487,7 @@ export default function SubmitPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-muted mb-1">🏊 Swimming (km × 3.0)</label>
+                      <label className="block text-xs text-muted mb-1">Swimming (km × 3.0)</label>
                       <input
                         type="number" step="0.1" min="0" value={swimmingKm}
                         onChange={(e) => { setSwimmingKm(e.target.value); saveDraft({ swimmingKm: e.target.value }); }}
@@ -499,7 +496,7 @@ export default function SubmitPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-muted mb-1">🎾 Ball sports (× 2.5 km)</label>
+                      <label className="block text-xs text-muted mb-1">Ball sports (× 2.5 km)</label>
                       <div className="flex items-center gap-2">
                         <button type="button" onClick={() => { const v = Math.max(0, ballSportSessions - 1); setBallSportSessions(v); saveDraft({ ballSportSessions: v }); }}
                           className="w-8 h-8 bg-background border border-card-border rounded text-foreground hover:border-fire/30">−</button>
@@ -533,69 +530,66 @@ export default function SubmitPage() {
           </div>
         </section>
 
-        <div className="rune-divider" />
+        <div className="my-8 flex justify-center">
+          <Image unoptimized src="/images/ui/dividers/long.png" alt="" width={2000} height={12} className="h-auto opacity-60" style={{ width: "97%" }} />
+        </div>
 
         {/* SECTION 2: Challenges */}
         <section>
           <h2 className="text-lg font-[family-name:var(--font-cinzel)] font-bold mb-1 flex items-center gap-2">
-            <span>{week?.type === "competition" ? "⚔️" : "🛡️"}</span>
             {week?.type === "competition" ? "Competition Week" : "Collaboration Week"}
           </h2>
 
           <div className="space-y-4 mt-4">
             {soloChallenge && (
-              <div className="bg-card border border-card-border rounded-lg p-4">
-                <div className="text-xs uppercase tracking-wider text-muted mb-1">Solo Challenge</div>
-                <div className="font-semibold text-foreground mb-1">{soloChallenge.title}</div>
-                <p className="text-sm text-muted mb-3">{soloChallenge.description}</p>
+              <div className="bg-background border border-card-border rounded-lg p-5">
+                <div className="text-sm uppercase tracking-wider text-muted mb-2 font-semibold">Solo Challenge</div>
+                <div className="font-[family-name:var(--font-cinzel)] font-bold text-foreground text-xl mb-2">{soloChallenge.title}</div>
+                <p className="text-sm text-muted mb-4">{soloChallenge.description}</p>
                 <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={() => { setSoloChallengeDone(true); saveDraft({ soloChallengeDone: true }); }}
-                    className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
-                      soloChallengeDone
-                        ? "bg-fire/20 border-fire text-fire"
-                        : "border-card-border text-muted hover:border-fire/30"
-                    }`}
-                  >Yes</button>
+                    className={`relative flex-1 transition-opacity ${soloChallengeDone ? "opacity-100" : "opacity-25 hover:opacity-40"}`}
+                  >
+                    <Image unoptimized src="/images/ui/buttons/secondary.png" alt="" width={400} height={133} className="w-full h-auto" />
+                    <span className="absolute inset-0 flex items-center justify-center text-sm font-[family-name:var(--font-cinzel)] font-semibold text-foreground">Yes</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => { setSoloChallengeDone(false); saveDraft({ soloChallengeDone: false }); }}
-                    className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
-                      !soloChallengeDone
-                        ? "bg-card-border/50 border-card-border text-foreground"
-                        : "border-card-border text-muted hover:border-card-border"
-                    }`}
-                  >No</button>
+                    className={`relative flex-1 transition-opacity ${!soloChallengeDone ? "opacity-100" : "opacity-25 hover:opacity-40"}`}
+                  >
+                    <Image unoptimized src="/images/ui/buttons/secondary.png" alt="" width={400} height={133} className="w-full h-auto" />
+                    <span className="absolute inset-0 flex items-center justify-center text-sm font-[family-name:var(--font-cinzel)] font-semibold text-foreground">No</span>
+                  </button>
                 </div>
               </div>
             )}
 
             {secondChallenge && week?.type === "competition" && (
-              <div className="bg-card border border-fire/20 rounded-lg p-4">
-                <div className="text-xs uppercase tracking-wider text-muted mb-1">Competitive Challenge</div>
-                <div className="font-semibold text-foreground mb-1">{secondChallenge.title}</div>
-                <p className="text-sm text-muted mb-3">{secondChallenge.description}</p>
+              <div className="bg-background border border-card-border rounded-lg p-5">
+                <div className="text-sm uppercase tracking-wider text-muted mb-2 font-semibold">Competitive Challenge</div>
+                <div className="font-[family-name:var(--font-cinzel)] font-bold text-foreground text-xl mb-2">{secondChallenge.title}</div>
+                <p className="text-sm text-muted mb-4">{secondChallenge.description}</p>
 
-                <div className="flex gap-3 mb-3">
+                <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={() => setSecondChallengeAttempted(true)}
-                    className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
-                      secondChallengeAttempted
-                        ? "bg-fire/20 border-fire text-fire"
-                        : "border-card-border text-muted"
-                    }`}
-                  >Attempted</button>
+                    className={`relative flex-1 transition-opacity ${secondChallengeAttempted ? "opacity-100" : "opacity-25 hover:opacity-40"}`}
+                  >
+                    <Image unoptimized src="/images/ui/buttons/secondary.png" alt="" width={400} height={133} className="w-full h-auto" />
+                    <span className="absolute inset-0 flex items-center justify-center text-sm font-[family-name:var(--font-cinzel)] font-semibold text-foreground">Attempted</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => { setSecondChallengeAttempted(false); setSecondChallengeResult(""); }}
-                    className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
-                      !secondChallengeAttempted
-                        ? "bg-card-border/50 border-card-border text-foreground"
-                        : "border-card-border text-muted"
-                    }`}
-                  >Did Not Attempt</button>
+                    className={`relative flex-1 transition-opacity ${!secondChallengeAttempted ? "opacity-100" : "opacity-25 hover:opacity-40"}`}
+                  >
+                    <Image unoptimized src="/images/ui/buttons/secondary.png" alt="" width={400} height={133} className="w-full h-auto" />
+                    <span className="absolute inset-0 flex items-center justify-center text-xs font-[family-name:var(--font-cinzel)] font-semibold text-foreground">Did Not Attempt</span>
+                  </button>
                 </div>
 
                 {secondChallengeAttempted && (() => {
@@ -633,31 +627,29 @@ export default function SubmitPage() {
             )}
 
             {secondChallenge && week?.type === "collaboration" && (
-              <div className="bg-card border border-ice/20 rounded-lg p-4">
-                <div className="text-xs uppercase tracking-wider text-muted mb-1">Team Challenge</div>
-                <div className="font-semibold text-foreground mb-1">{secondChallenge.title}</div>
-                <p className="text-sm text-muted mb-3">{secondChallenge.description}</p>
+              <div className="bg-background border border-card-border rounded-lg p-5">
+                <div className="text-sm uppercase tracking-wider text-muted mb-2 font-semibold">Team Challenge</div>
+                <div className="font-[family-name:var(--font-cinzel)] font-bold text-foreground text-xl mb-2">{secondChallenge.title}</div>
+                <p className="text-sm text-muted mb-4">{secondChallenge.description}</p>
 
                 {secondChallenge.dataType === "boolean" ? (
                   <div className="flex gap-3">
                     <button
                       type="button"
                       onClick={() => setSecondChallengeAttempted(true)}
-                      className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
-                        secondChallengeAttempted
-                          ? "bg-ice/20 border-ice text-ice"
-                          : "border-card-border text-muted"
-                      }`}
-                    >Yes, I contributed</button>
+                      className={`relative flex-1 transition-opacity ${secondChallengeAttempted ? "opacity-100" : "opacity-25 hover:opacity-40"}`}
+                    >
+                      <Image unoptimized src="/images/ui/buttons/secondary.png" alt="" width={400} height={133} className="w-full h-auto" />
+                      <span className="absolute inset-0 flex items-center justify-center text-xs font-[family-name:var(--font-cinzel)] font-semibold text-foreground">Yes, I contributed</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => setSecondChallengeAttempted(false)}
-                      className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
-                        !secondChallengeAttempted
-                          ? "bg-card-border/50 border-card-border text-foreground"
-                          : "border-card-border text-muted"
-                      }`}
-                    >No</button>
+                      className={`relative flex-1 transition-opacity ${!secondChallengeAttempted ? "opacity-100" : "opacity-25 hover:opacity-40"}`}
+                    >
+                      <Image unoptimized src="/images/ui/buttons/secondary.png" alt="" width={400} height={133} className="w-full h-auto" />
+                      <span className="absolute inset-0 flex items-center justify-center text-sm font-[family-name:var(--font-cinzel)] font-semibold text-foreground">No</span>
+                    </button>
                   </div>
                 ) : (
                   <div className="text-xs text-muted">
@@ -668,34 +660,32 @@ export default function SubmitPage() {
               </div>
             )}
             {buddyChallenge && (
-              <div className="bg-card border border-gold/20 rounded-lg p-4">
-                <div className="text-xs uppercase tracking-wider text-muted mb-1">🤝 Buddy Challenge</div>
+              <div className="bg-background border border-card-border rounded-lg p-5">
+                <div className="text-sm uppercase tracking-wider text-muted mb-2 font-semibold">Buddy Challenge</div>
                 {buddyTeammateName && (
                   <div className="text-xs text-gold mb-2">Your buddy: {buddyTeammateName}</div>
                 )}
-                <div className="font-semibold text-foreground mb-1">{buddyChallenge.title}</div>
-                <p className="text-sm text-muted mb-3">{buddyChallenge.description}</p>
+                <div className="font-[family-name:var(--font-cinzel)] font-bold text-foreground text-xl mb-2">{buddyChallenge.title}</div>
+                <p className="text-sm text-muted mb-4">{buddyChallenge.description}</p>
 
                 {buddyChallenge.dataType === "boolean" ? (
                   <div className="flex gap-3">
                     <button
                       type="button"
                       onClick={() => { setBuddyChallengeDone(true); saveDraft({ buddyChallengeDone: true }); }}
-                      className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
-                        buddyChallengeDone
-                          ? "bg-gold/20 border-gold text-gold"
-                          : "border-card-border text-muted hover:border-gold/30"
-                      }`}
-                    >Yes</button>
+                      className={`relative flex-1 transition-opacity ${buddyChallengeDone ? "opacity-100" : "opacity-25 hover:opacity-40"}`}
+                    >
+                      <Image unoptimized src="/images/ui/buttons/secondary.png" alt="" width={400} height={133} className="w-full h-auto" />
+                      <span className="absolute inset-0 flex items-center justify-center text-sm font-[family-name:var(--font-cinzel)] font-semibold text-foreground">Yes</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => { setBuddyChallengeDone(false); saveDraft({ buddyChallengeDone: false }); }}
-                      className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
-                        !buddyChallengeDone
-                          ? "bg-card-border/50 border-card-border text-foreground"
-                          : "border-card-border text-muted hover:border-card-border"
-                      }`}
-                    >No</button>
+                      className={`relative flex-1 transition-opacity ${!buddyChallengeDone ? "opacity-100" : "opacity-25 hover:opacity-40"}`}
+                    >
+                      <Image unoptimized src="/images/ui/buttons/secondary.png" alt="" width={400} height={133} className="w-full h-auto" />
+                      <span className="absolute inset-0 flex items-center justify-center text-sm font-[family-name:var(--font-cinzel)] font-semibold text-foreground">No</span>
+                    </button>
                   </div>
                 ) : (
                   <div>
@@ -721,35 +711,58 @@ export default function SubmitPage() {
           </div>
         </section>
 
-        <div className="rune-divider" />
+        <div className="my-8 flex justify-center">
+          <Image unoptimized src="/images/ui/dividers/long.png" alt="" width={2000} height={12} className="h-auto opacity-60" style={{ width: "97%" }} />
+        </div>
 
         {/* SECTION 3: Hype Vote */}
         <section>
           <h2 className="text-lg font-[family-name:var(--font-cinzel)] font-bold mb-1">
-            🛡️ Give Your Shield
+            Give Your Shield
           </h2>
           <p className="text-sm text-muted mb-4">Who deserves recognition this week?</p>
 
-          <div className="grid grid-cols-3 gap-3">
-            {players.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => {
-                  const newVal = hypeVoteFor === p.id ? null : p.id;
-                  setHypeVoteFor(newVal);
-                  saveDraft({ hypeVoteFor: newVal });
-                }}
-                className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-all ${
-                  hypeVoteFor === p.id
-                    ? "border-fire bg-fire/10 scale-105"
-                    : "border-card-border bg-card hover:border-fire/30"
-                }`}
-              >
-                <span className="text-2xl">{SIGIL_EMOJIS[(p.sigil || "axe") as Sigil]}</span>
-                <span className="text-xs truncate w-full text-center">{p.vikingName}</span>
-              </button>
-            ))}
+          <div className="grid grid-cols-2 gap-3">
+            {players.map((p) => {
+              const sigilSrc = SIGIL_IMAGES[p.sigil || "axe"] || SIGIL_IMAGES["axe"];
+              const selected = hypeVoteFor === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    const newVal = selected ? null : p.id;
+                    setHypeVoteFor(newVal);
+                    saveDraft({ hypeVoteFor: newVal });
+                  }}
+                  className={`relative rounded-lg border transition-all ${
+                    selected
+                      ? "border-fire bg-fire/10 scale-[1.03]"
+                      : "border-card-border bg-background hover:border-fire/30"
+                  }`}
+                  style={{ aspectRatio: "3 / 2.2", overflow: "hidden" }}
+                >
+                  {/* Sigil — pinned near top, overflows bottom */}
+                  <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none" style={{ top: "3px", opacity: 0.85, width: "67%" }}>
+                    <Image
+                      unoptimized
+                      src={sigilSrc}
+                      alt={p.sigil || "axe"}
+                      width={400}
+                      height={400}
+                      className="w-full h-auto select-none"
+                      draggable={false}
+                    />
+                  </div>
+                  {/* Name overlay at bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 z-10 pb-3 pt-11 text-center" style={{ background: "linear-gradient(to top, rgba(13,12,11,0.85) 45%, transparent 100%)" }}>
+                    <span className="font-[family-name:var(--font-cinzel)] font-semibold text-foreground" style={{ fontSize: "15px" }}>
+                      {p.vikingName}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
           {hypeVoteFor && (
             <div className="mt-3">
@@ -770,7 +783,9 @@ export default function SubmitPage() {
           )}
         </section>
 
-        <div className="rune-divider" />
+        <div className="my-8 flex justify-center">
+          <Image unoptimized src="/images/ui/dividers/long.png" alt="" width={2000} height={12} className="h-auto opacity-60" style={{ width: "97%" }} />
+        </div>
 
         {/* Submit */}
         {error && (
@@ -780,9 +795,16 @@ export default function SubmitPage() {
         <button
           type="submit"
           disabled={submitting || !kmRun}
-          className="w-full bg-fire text-background font-[family-name:var(--font-cinzel)] font-bold py-4 rounded-lg text-lg hover:bg-fire/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full hover:opacity-90 disabled:opacity-75 disabled:cursor-not-allowed transition-opacity"
         >
-          {submitting ? "Recording your deeds..." : "Submit My Week"}
+          <Image
+            unoptimized
+            src="/images/ui/buttons/submit-week.png"
+            alt={submitting ? "Recording your deeds..." : "Submit My Week"}
+            width={400}
+            height={60}
+            className="w-full h-auto"
+          />
         </button>
       </form>
       <BottomNav active="submit" profileId={session?.playerId} />

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/portal", "/setup", "/api/auth"];
+const PUBLIC_PATHS = ["/login", "/portal", "/setup", "/api/auth", "/preview"];
 
 function isTokenValid(token: string): boolean {
   try {
@@ -41,5 +41,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|audio).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|audio|images).*)"],
 };

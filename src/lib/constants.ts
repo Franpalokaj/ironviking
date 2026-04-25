@@ -70,16 +70,17 @@ export function getNextTitle(xp: number): (typeof TITLES[number]) | null {
 }
 
 export const REALMS = [
-  { position: 1, name: "Asgard", color: "gold", cssClass: "text-gold asgard-glow" },
+  { position: 1, name: "Asgard", color: "gold", cssClass: "text-gold" },
   { position: 2, name: "Vanaheim", color: "silver", cssClass: "text-silver" },
   { position: 3, name: "Midgard", color: "bronze", cssClass: "text-bronze" },
   { position: 4, name: "Jotunheim", color: "stone", cssClass: "text-stone" },
   { position: 5, name: "Helheim", color: "purple", cssClass: "text-purple" },
-  { position: 6, name: "Niflheim", color: "ice", cssClass: "text-ice niflheim-glow" },
+  { position: 6, name: "Niflheim", color: "ice", cssClass: "text-ice" },
+  { position: 7, name: "Muspelheim", color: "purple", cssClass: "text-purple" },
 ] as const;
 
 export function getRealmForRank(rank: number): typeof REALMS[number] {
-  return REALMS[Math.min(rank - 1, 5)];
+  return REALMS[Math.min(rank - 1, 6)];
 }
 
 export const RANK_BONUSES = [30, 22, 16, 10, 5, 2] as const;
@@ -150,6 +151,39 @@ export const SIGIL_EMOJIS: Record<Sigil, string> = {
   skull: "💀",
 };
 
+export const SIGIL_IMAGES: Record<string, string> = {
+  wolf: "/images/sigils/wolf.png",
+  dragon: "/images/sigils/dragon.png",
+  bear: "/images/sigils/bear.png",
+  raven: "/images/sigils/raven.png",
+  crown: "/images/sigils/crown.png",
+  axe: "/images/sigils/axe.png",
+  serpent: "/images/sigils/serpent.png",
+  shield: "/images/sigils/axe.png",
+  longship: "/images/sigils/axe.png",
+  skull: "/images/sigils/axe.png",
+};
+
+export const TITLE_IMAGES: Record<string, string> = {
+  Thrall: "/images/titles/thrall.png",
+  Farmhand: "/images/titles/farmhand.png",
+  Footsoldier: "/images/titles/footsoldier.png",
+  "Shield-Bearer": "/images/titles/shield-bearer.png",
+  Raider: "/images/titles/raider.png",
+  Jarl: "/images/titles/jarl.png",
+  Einherjar: "/images/titles/einherjar.png",
+};
+
+export const REALM_IMAGES: Record<string, string> = {
+  Asgard: "/images/realms/asgard.png",
+  Vanaheim: "/images/realms/vanaheim.png",
+  Midgard: "/images/realms/midgard.png",
+  Jotunheim: "/images/realms/jotunheim.png",
+  Helheim: "/images/realms/helheim.png",
+  Niflheim: "/images/realms/niflheim.png",
+  Muspelheim: "/images/realms/muspelheim.png",
+};
+
 export const DEFAULT_CONQUESTS = [
   { title: "Sub-60 min 10K", description: "Run 10 kilometres in under 60 minutes", xpReward: 75 },
   { title: "Sub-30 min 5K", description: "Run 5 kilometres in under 30 minutes", xpReward: 50 },
@@ -169,11 +203,7 @@ export const DEFAULT_CONQUESTS = [
 ] as const;
 
 export const COUNTDOWN_PHRASES = [
-  "days until the Battle of Valhalla",
-  "days until the gates of Asgard open",
-  "sunrises until Ragnarok",
-  "days until Odin's Trial",
-  "days until the final march",
+  "days until we dine in Valhalla",
 ];
 
 export const PHASES = [
