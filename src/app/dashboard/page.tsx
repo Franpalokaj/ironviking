@@ -469,7 +469,7 @@ export default function DashboardPage() {
         );
       })()}
       {/* Header */}
-      <header className="relative z-40 bg-background/35">
+      <header className="relative z-40">
         <div className="max-w-lg mx-auto px-4 flex items-center justify-between relative" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
           <div className="w-10" />
           <Image
@@ -505,7 +505,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4" style={{ marginTop: "-25px" }}>
+      <div className="max-w-lg mx-auto px-4">
         {/* Countdown with background circle positioned behind */}
         <div className="relative">
           {/* eslint-disable-next-line @next/next/no-img-element */}
