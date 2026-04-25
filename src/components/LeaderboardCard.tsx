@@ -143,17 +143,17 @@ export default function LeaderboardCard({
         </div>
 
         {/* Realm + Title centered row */}
-        <div className="flex items-center w-full px-5" style={{ marginTop: "10px" }}>
-          <div className="flex-1 flex items-center justify-end gap-1.5">
-            <Image unoptimized src={realmSrc} alt={realm.name} width={22} height={22} />
-            <span className={`font-[family-name:var(--font-cinzel)] text-sm font-semibold ${realm.cssClass}`}>
+        <div className="flex items-center w-full px-3" style={{ marginTop: "10px" }}>
+          <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
+            <Image unoptimized src={realmSrc} alt={realm.name} width={18} height={18} className="shrink-0" />
+            <span className={`font-[family-name:var(--font-cinzel)] text-xs sm:text-sm font-semibold ${realm.cssClass} truncate`}>
               {realm.name}
             </span>
           </div>
-          <div className="mx-3 shrink-0" style={{ width: "1px" }} />
-          <div className="flex-1 flex items-center justify-start gap-1.5">
-            <Image unoptimized src={titleSrc} alt={title} width={22} height={22} />
-            <span className={`${titleStyle.color} font-[family-name:var(--font-cinzel)] text-sm font-semibold ${titleStyle.glowClass || ""}`}>
+          <div className="mx-2 shrink-0" style={{ width: "1px" }} />
+          <div className="flex-1 flex items-center justify-start gap-1 min-w-0">
+            <Image unoptimized src={titleSrc} alt={title} width={18} height={18} className="shrink-0" />
+            <span className={`${titleStyle.color} font-[family-name:var(--font-cinzel)] text-xs sm:text-sm font-semibold ${titleStyle.glowClass || ""} truncate`}>
               {title}
             </span>
           </div>

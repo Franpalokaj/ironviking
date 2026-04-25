@@ -397,7 +397,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-dvh pb-24">
+    <div className="min-h-dvh pb-24 overflow-x-hidden">
       <MilestoneCelebration />
 
       {/* Weekly XP reveal — shown once per scored week */}
