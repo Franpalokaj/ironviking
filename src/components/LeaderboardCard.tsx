@@ -123,7 +123,7 @@ export default function LeaderboardCard({
         </div>
 
         {/* Name + badges */}
-        <div className="flex items-center justify-center gap-2 flex-wrap" style={{ marginTop: "4px" }}>
+        <div className="flex items-center justify-center gap-2 flex-wrap name-row" style={{ marginTop: "4px" }}>
           <h3 className="font-[family-name:var(--font-cinzel)] font-bold text-xl tracking-wide" style={{ color: "#d4ccc0" }}>
             {vikingName}
           </h3>
