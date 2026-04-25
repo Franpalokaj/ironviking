@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { SIGIL_EMOJIS, type Sigil, TITLE_STYLES } from "@/lib/constants";
+import Image from "next/image";
+import { SIGIL_IMAGES, TITLE_IMAGES, TITLE_STYLES } from "@/lib/constants";
 
 interface RevealPlayer {
   playerId: number;
@@ -107,7 +108,7 @@ export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: Le
         {phase === "intro" && (
           <div className="flex-1 flex items-center justify-center text-center animate-[fadeIn_0.8s_ease-out]">
             <div>
-              <div className="text-5xl mb-4 animate-pulse">⚔️</div>
+              <div className="text-3xl font-[family-name:var(--font-cinzel)] font-bold text-fire mb-4 animate-pulse tracking-widest">⚔</div>
               <h2 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-fire">
                 The Realm Shifts
               </h2>
@@ -155,17 +156,26 @@ export default function LeaderboardReveal({ players, myPlayerId, onDismiss }: Le
                         : "none",
                     }}
                   >
-                    <span className="text-xl flex-shrink-0">{SIGIL_EMOJIS[(p.sigil || "axe") as Sigil]}</span>
+                    <Image
+                      unoptimized
+                      src={SIGIL_IMAGES[p.sigil || "axe"] || SIGIL_IMAGES["axe"]}
+                      alt={p.sigil || "axe"}
+                      width={40}
+                      height={40}
+                      className="flex-shrink-0"
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
                         <span className="text-xs font-bold text-muted w-4">#{displayRank}</span>
-                        <span className="font-semibold text-sm text-foreground truncate">{p.vikingName}</span>
+                        <span className="font-[family-name:var(--font-cinzel)] font-semibold text-sm text-foreground truncate">{p.vikingName}</span>
                       </div>
                       {(() => {
                         const ts = TITLE_STYLES[p.titleAfter] || TITLE_STYLES["Thrall"];
+                        const titleImg = TITLE_IMAGES[p.titleAfter];
                         return (
-                          <div className={`text-[10px] ${ts.color} ${ts.glowClass || ""}`}>
-                            {ts.icon} {p.titleAfter}
+                          <div className={`text-[10px] ${ts.color} ${ts.glowClass || ""} flex items-center gap-1`}>
+                            {titleImg && <Image unoptimized src={titleImg} alt={p.titleAfter} width={12} height={12} />}
+                            {p.titleAfter}
                           </div>
                         );
                       })()}
