@@ -504,9 +504,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </header>
-      <div style={{ marginTop: "-7px" }} className="relative z-40">
-        <Image unoptimized src="/images/ui/dividers/long.png" alt="" width={2000} height={12} className="w-full h-auto opacity-60" />
-      </div>
 
       <div className="max-w-lg mx-auto px-4" style={{ marginTop: "-25px" }}>
         {/* Countdown with background circle positioned behind */}
