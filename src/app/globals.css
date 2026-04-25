@@ -247,71 +247,47 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* On narrow screens, shift realm/title and XP bar up to align with card background */
+/* On narrow screens, shift card elements up to align with card background */
 @media (max-width: 480px) {
-  .realm-title-row {
-    margin-top: 7px !important;
-  }
-  .xp-bar-row {
-    margin-top: 17px !important;
-  }
+  .name-row { margin-top: 2px !important; }
+  .realm-title-row { margin-top: 7px !important; }
+  .xp-bar-row { margin-top: 17px !important; }
 }
 
 @media (max-width: 460px) {
-  .realm-title-row {
-    margin-top: 4px !important;
-  }
-  .xp-bar-row {
-    margin-top: 14px !important;
-  }
+  .name-row { margin-top: 0px !important; }
+  .realm-title-row { margin-top: 4px !important; }
+  .xp-bar-row { margin-top: 14px !important; }
 }
 
 @media (max-width: 440px) {
-  .name-row {
-    margin-top: -1px !important;
-  }
-  .realm-title-row {
-    margin-top: -1px !important;
-  }
-  .xp-bar-row {
-    margin-top: 9px !important;
-  }
+  .name-row { margin-top: -2px !important; }
+  .realm-title-row { margin-top: 1px !important; }
+  .xp-bar-row { margin-top: 11px !important; }
 }
 
 @media (max-width: 420px) {
-  .realm-title-row {
-    margin-top: -2px !important;
-  }
-  .xp-bar-row {
-    margin-top: 8px !important;
-  }
+  .name-row { margin-top: -4px !important; }
+  .realm-title-row { margin-top: -2px !important; }
+  .xp-bar-row { margin-top: 8px !important; }
 }
 
 @media (max-width: 400px) {
-  .realm-title-row {
-    margin-top: -5px !important;
-  }
-  .xp-bar-row {
-    margin-top: 5px !important;
-  }
+  .name-row { margin-top: -6px !important; }
+  .realm-title-row { margin-top: -5px !important; }
+  .xp-bar-row { margin-top: 5px !important; }
 }
 
 @media (max-width: 380px) {
-  .realm-title-row {
-    margin-top: -8px !important;
-  }
-  .xp-bar-row {
-    margin-top: 2px !important;
-  }
+  .name-row { margin-top: -8px !important; }
+  .realm-title-row { margin-top: -8px !important; }
+  .xp-bar-row { margin-top: 2px !important; }
 }
 
 @media (max-width: 360px) {
-  .realm-title-row {
-    margin-top: -11px !important;
-  }
-  .xp-bar-row {
-    margin-top: -1px !important;
-  }
+  .name-row { margin-top: -10px !important; }
+  .realm-title-row { margin-top: -11px !important; }
+  .xp-bar-row { margin-top: -1px !important; }
 }
 
 .rune-divider {
