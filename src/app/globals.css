@@ -247,6 +247,16 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* On narrow screens, shift realm/title and XP bar up to align with card background */
+@media (max-width: 420px) {
+  .realm-title-row {
+    margin-top: 7px !important;
+  }
+  .xp-bar-row {
+    margin-top: 17px !important;
+  }
+}
+
 .rune-divider {
   height: 1px;
   background: linear-gradient(to right, transparent, var(--card-border), var(--fire), var(--card-border), transparent);
