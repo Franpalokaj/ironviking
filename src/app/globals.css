@@ -268,10 +268,10 @@ h1, h2, h3, h4, h5, h6 {
 
 @media (max-width: 440px) {
   .realm-title-row {
-    margin-top: 1px !important;
+    margin-top: -1px !important;
   }
   .xp-bar-row {
-    margin-top: 11px !important;
+    margin-top: 9px !important;
   }
 }
 
