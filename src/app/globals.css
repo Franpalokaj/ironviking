@@ -257,6 +257,33 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+@media (max-width: 400px) {
+  .realm-title-row {
+    margin-top: 4px !important;
+  }
+  .xp-bar-row {
+    margin-top: 14px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .realm-title-row {
+    margin-top: 1px !important;
+  }
+  .xp-bar-row {
+    margin-top: 11px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .realm-title-row {
+    margin-top: -2px !important;
+  }
+  .xp-bar-row {
+    margin-top: 8px !important;
+  }
+}
+
 .rune-divider {
   height: 1px;
   background: linear-gradient(to right, transparent, var(--card-border), var(--fire), var(--card-border), transparent);
