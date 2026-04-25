@@ -248,7 +248,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* On narrow screens, shift realm/title and XP bar up to align with card background */
-@media (max-width: 420px) {
+@media (max-width: 480px) {
   .realm-title-row {
     margin-top: 7px !important;
   }
@@ -257,7 +257,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-@media (max-width: 400px) {
+@media (max-width: 460px) {
   .realm-title-row {
     margin-top: 4px !important;
   }
@@ -266,7 +266,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 440px) {
   .realm-title-row {
     margin-top: 1px !important;
   }
@@ -275,12 +275,39 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 420px) {
   .realm-title-row {
     margin-top: -2px !important;
   }
   .xp-bar-row {
     margin-top: 8px !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .realm-title-row {
+    margin-top: -5px !important;
+  }
+  .xp-bar-row {
+    margin-top: 5px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .realm-title-row {
+    margin-top: -8px !important;
+  }
+  .xp-bar-row {
+    margin-top: 2px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .realm-title-row {
+    margin-top: -11px !important;
+  }
+  .xp-bar-row {
+    margin-top: -1px !important;
   }
 }
 
