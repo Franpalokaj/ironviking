@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { players, weeklyScores, submissions, hypeVotes, milestones, conquests, weeks, challenges } from "@/db/schema";
 import { eq, sql, desc, inArray } from "drizzle-orm";
+import { getWeekDeadline } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
   try {
@@ -103,10 +104,11 @@ export async function GET(request: NextRequest) {
         };
       }).filter(Boolean).sort((a, b) => (b?.weekNumber ?? 0) - (a?.weekNumber ?? 0));
 
-      // Missed weeks: past locked weeks where this player has no submission
+      // Missed weeks: past-deadline weeks where this player has no submission
+      const now = new Date();
       const submittedWeekIds = new Set(subs.map(s => s.weekId));
       const missedWeeks = allWeeks
-        .filter(w => w.isLocked && !submittedWeekIds.has(w.id))
+        .filter(w => !submittedWeekIds.has(w.id) && now > getWeekDeadline(w.endDate))
         .sort((a, b) => a.weekNumber - b.weekNumber)
         .map(w => ({ id: w.id, weekNumber: w.weekNumber, startDate: w.startDate, endDate: w.endDate }));
 
