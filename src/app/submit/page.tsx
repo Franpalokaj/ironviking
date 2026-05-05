@@ -1,10 +1,24 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { SIGIL_IMAGES, getPhaseForWeek, WEEKLY_KM_TARGETS, getWeekDeadline, ACTIVITY_MULTIPLIERS, getCurrentWeekNumber } from "@/lib/constants";
 import BottomNav from "@/components/BottomNav";
+
+export default function SubmitPageWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-dvh flex items-center justify-center">
+        <div className="text-fire font-[family-name:var(--font-cinzel)] animate-pulse">
+          Preparing your scroll...
+        </div>
+      </div>
+    }>
+      <SubmitPage />
+    </Suspense>
+  );
+}
 
 interface Player {
   id: number;
@@ -30,7 +44,7 @@ interface Week {
   isLocked: boolean;
 }
 
-export default function SubmitPage() {
+function SubmitPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedWeek = searchParams.get("week"); // e.g. ?week=5
