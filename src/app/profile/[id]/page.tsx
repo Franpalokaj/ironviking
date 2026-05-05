@@ -104,6 +104,7 @@ export default function ProfilePage() {
   const [questLog, setQuestLog] = useState<QuestLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [completingId, setCompletingId] = useState<number | null>(null);
   const [benchmarkBaselines, setBenchmarkBaselines] = useState<{ skill: string; value: number; setAt: string }[]>([]);
   const [benchmarkGoalsList, setBenchmarkGoalsList] = useState<{ skill: string; goalValue: number; xpReward: number; achieved: boolean; latestRecordedValue?: number | null }[]>([]);
@@ -122,6 +123,7 @@ export default function ProfilePage() {
       if (!sessionRes.ok) { router.push("/login"); return; }
       const sessionData = await sessionRes.json();
       setIsOwnProfile(String(sessionData.session.playerId) === playerId);
+      setIsAdmin(sessionData.session.isAdmin === true);
 
       const res = await fetch(`/api/players?id=${playerId}`);
       if (!res.ok) { router.push("/dashboard"); return; }
@@ -336,8 +338,8 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Missed Weeks — own profile only */}
-        {isOwnProfile && missedWeeks.length > 0 && (
+        {/* Missed Weeks — own profile or admin viewing */}
+        {(isOwnProfile || isAdmin) && missedWeeks.length > 0 && (
           <>
             <h3 className="font-[family-name:var(--font-cinzel)] font-bold text-sm mb-3">Missed Weeks</h3>
             <div className="space-y-2 mb-6">
