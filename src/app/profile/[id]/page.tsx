@@ -83,6 +83,13 @@ interface QuestLogEntry {
   secondXpEarned: boolean | null;
 }
 
+interface MissedWeek {
+  id: number;
+  weekNumber: number;
+  startDate: string;
+  endDate: string;
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const params = useParams();
@@ -107,6 +114,7 @@ export default function ProfilePage() {
   const [benchmarkSaving, setBenchmarkSaving] = useState(false);
   const [showLogbook, setShowLogbook] = useState(false);
   const [shieldMessagesByWeek, setShieldMessagesByWeek] = useState<Record<number, { giverName: string; message: string | null }[]>>({});
+  const [missedWeeks, setMissedWeeks] = useState<MissedWeek[]>([]);
 
   const loadData = useCallback(async () => {
     try {
@@ -127,6 +135,7 @@ export default function ProfilePage() {
       setConquests(data.conquests || []);
       setQuestLog(data.questLog || []);
       setShieldMessagesByWeek(data.shieldMessagesByWeek || {});
+      setMissedWeeks(data.missedWeeks || []);
 
       const baselineRes = await fetch(`/api/baselines?playerId=${playerId}`);
       if (baselineRes.ok) {
@@ -325,6 +334,35 @@ export default function ProfilePage() {
               })}
             </div>
           </div>
+        )}
+
+        {/* Missed Weeks — own profile only */}
+        {isOwnProfile && missedWeeks.length > 0 && (
+          <>
+            <h3 className="font-[family-name:var(--font-cinzel)] font-bold text-sm mb-3">Missed Weeks</h3>
+            <div className="space-y-2 mb-6">
+              {missedWeeks.map((w) => (
+                <div key={w.id} className="bg-card border border-fire/20 rounded-lg p-3 flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-[family-name:var(--font-cinzel)] font-semibold text-foreground">
+                      Week {w.weekNumber}
+                    </div>
+                    <div className="text-[10px] text-muted">
+                      {new Date(w.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                      {" – "}
+                      {new Date(w.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => router.push(`/submit?week=${w.weekNumber}`)}
+                    className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-fire border border-fire/40 rounded-lg px-3 py-1.5 hover:bg-fire/10 transition-colors"
+                  >
+                    Submit
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         <div className="rune-divider my-6" />

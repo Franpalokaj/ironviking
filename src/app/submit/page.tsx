@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { SIGIL_IMAGES, getPhaseForWeek, WEEKLY_KM_TARGETS, getWeekDeadline, ACTIVITY_MULTIPLIERS } from "@/lib/constants";
+import { SIGIL_IMAGES, getPhaseForWeek, WEEKLY_KM_TARGETS, getWeekDeadline, ACTIVITY_MULTIPLIERS, getCurrentWeekNumber } from "@/lib/constants";
 import BottomNav from "@/components/BottomNav";
 
 interface Player {
@@ -32,6 +32,9 @@ interface Week {
 
 export default function SubmitPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedWeek = searchParams.get("week"); // e.g. ?week=5
+  const [isPastWeek, setIsPastWeek] = useState(false);
   const [session, setSession] = useState<{ playerId: number; vikingName: string } | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [week, setWeek] = useState<Week | null>(null);
@@ -74,12 +77,21 @@ export default function SubmitPage() {
       const { session: s } = await sessionRes.json();
       setSession(s);
 
+      const weekUrl = requestedWeek
+        ? `/api/weeks/by-number?n=${requestedWeek}`
+        : "/api/weeks/current";
       const [weekRes, playersRes] = await Promise.all([
-        fetch("/api/weeks/current"),
+        fetch(weekUrl),
         fetch("/api/players"),
       ]);
       const weekData = await weekRes.json();
       const playersData = await playersRes.json();
+
+      // Detect if this is a past week submission
+      if (requestedWeek) {
+        const currentWeekNum = getCurrentWeekNumber();
+        setIsPastWeek(Number(requestedWeek) < currentWeekNum);
+      }
 
       setWeek(weekData.week);
       setSoloChallenge(weekData.soloChallenge);
@@ -135,7 +147,7 @@ export default function SubmitPage() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, requestedWeek]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -373,6 +385,15 @@ export default function SubmitPage() {
       </header>
 
       <form onSubmit={handleSubmit} className="max-w-lg mx-auto px-4 py-6 space-y-8">
+        {isPastWeek && (
+          <div className="flex items-center gap-2 bg-fire/10 border border-fire/30 rounded-lg px-4 py-3 animate-[fadeIn_0.6s_ease-out]">
+            <span className="text-sm shrink-0 text-fire font-bold">*</span>
+            <div className="text-left min-w-0">
+              <div className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-fire">Late Submission</div>
+              <div className="text-[10px] text-muted">This is a past week — your stats will count but no on-time bonus.</div>
+            </div>
+          </div>
+        )}
         {/* SECTION 1: Training */}
         <section>
           <h2 className="text-lg font-[family-name:var(--font-cinzel)] font-bold mb-4 flex items-center gap-2">
@@ -392,7 +413,6 @@ export default function SubmitPage() {
                   onChange={(e) => { setKmRun(e.target.value); saveDraft({ kmRun: e.target.value }); }}
                   className="flex-1 bg-card border border-card-border rounded-lg px-4 py-3 text-foreground text-xl focus:outline-none focus:border-fire/50"
                   placeholder="0.0"
-                  required
                 />
                 <span className="text-muted text-sm">km</span>
               </div>
@@ -711,81 +731,85 @@ export default function SubmitPage() {
           </div>
         </section>
 
-        <div className="my-8 flex justify-center">
-          <Image unoptimized src="/images/ui/dividers/long.png" alt="" width={2000} height={12} className="h-auto opacity-60" style={{ width: "97%" }} />
-        </div>
-
-        {/* SECTION 3: Hype Vote */}
-        <section>
-          <h2 className="text-lg font-[family-name:var(--font-cinzel)] font-bold mb-1">
-            Give Your Shield
-          </h2>
-          <p className="text-sm text-muted mb-4">Who deserves recognition this week?</p>
-
-          <div className="grid grid-cols-2 gap-3">
-            {players.map((p) => {
-              const sigilSrc = SIGIL_IMAGES[p.sigil || "axe"] || SIGIL_IMAGES["axe"];
-              const selected = hypeVoteFor === p.id;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => {
-                    const newVal = selected ? null : p.id;
-                    setHypeVoteFor(newVal);
-                    saveDraft({ hypeVoteFor: newVal });
-                  }}
-                  className={`relative rounded-lg border transition-all ${
-                    selected
-                      ? "border-fire bg-fire/10 scale-[1.03]"
-                      : "border-card-border bg-background hover:border-fire/30"
-                  }`}
-                  style={{ aspectRatio: "3 / 2.2", overflow: "hidden" }}
-                >
-                  {/* Sigil — pinned near top, overflows bottom */}
-                  <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none" style={{ top: "3px", opacity: 0.85, width: "67%" }}>
-                    <Image
-                      unoptimized
-                      src={sigilSrc}
-                      alt={p.sigil || "axe"}
-                      width={400}
-                      height={400}
-                      className="w-full h-auto select-none"
-                      draggable={false}
-                    />
-                  </div>
-                  {/* Name overlay at bottom */}
-                  <div className="absolute bottom-0 left-0 right-0 z-10 pb-3 pt-11 text-center" style={{ background: "linear-gradient(to top, rgba(13,12,11,0.85) 45%, transparent 100%)" }}>
-                    <span className="font-[family-name:var(--font-cinzel)] font-semibold text-foreground" style={{ fontSize: "15px" }}>
-                      {p.vikingName}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          {hypeVoteFor && (
-            <div className="mt-3">
-              <label className="block text-xs text-muted mb-1">Add a short message (optional)</label>
-              <input
-                type="text"
-                maxLength={300}
-                value={hypeVoteMessage}
-                onChange={(e) => { setHypeVoteMessage(e.target.value); saveDraft({ hypeVoteMessage: e.target.value }); }}
-                placeholder="e.g. Great week, warrior!"
-                className="w-full bg-background border border-card-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-fire/50"
-              />
-              <p className="text-[10px] text-muted mt-0.5">They’ll see this when scores are settled.</p>
+        {!isPastWeek && (
+          <>
+            <div className="my-8 flex justify-center">
+              <Image unoptimized src="/images/ui/dividers/long.png" alt="" width={2000} height={12} className="h-auto opacity-60" style={{ width: "97%" }} />
             </div>
-          )}
-          {!hypeVoteFor && (
-            <p className="text-xs text-muted mt-2">Tap a warrior to give your shield — or withhold it this week.</p>
-          )}
-        </section>
 
-        <div className="my-8 flex justify-center">
-          <Image unoptimized src="/images/ui/dividers/long.png" alt="" width={2000} height={12} className="h-auto opacity-60" style={{ width: "97%" }} />
-        </div>
+            {/* SECTION 3: Hype Vote — only for current week */}
+            <section>
+              <h2 className="text-lg font-[family-name:var(--font-cinzel)] font-bold mb-1">
+                Give Your Shield
+              </h2>
+              <p className="text-sm text-muted mb-4">Who deserves recognition this week?</p>
+
+              <div className="grid grid-cols-2 gap-3">
+                {players.map((p) => {
+                  const sigilSrc = SIGIL_IMAGES[p.sigil || "axe"] || SIGIL_IMAGES["axe"];
+                  const selected = hypeVoteFor === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        const newVal = selected ? null : p.id;
+                        setHypeVoteFor(newVal);
+                        saveDraft({ hypeVoteFor: newVal });
+                      }}
+                      className={`relative rounded-lg border transition-all ${
+                        selected
+                          ? "border-fire bg-fire/10 scale-[1.03]"
+                          : "border-card-border bg-background hover:border-fire/30"
+                      }`}
+                      style={{ aspectRatio: "3 / 2.2", overflow: "hidden" }}
+                    >
+                      {/* Sigil — pinned near top, overflows bottom */}
+                      <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none" style={{ top: "3px", opacity: 0.85, width: "67%" }}>
+                        <Image
+                          unoptimized
+                          src={sigilSrc}
+                          alt={p.sigil || "axe"}
+                          width={400}
+                          height={400}
+                          className="w-full h-auto select-none"
+                          draggable={false}
+                        />
+                      </div>
+                      {/* Name overlay at bottom */}
+                      <div className="absolute bottom-0 left-0 right-0 z-10 pb-3 pt-11 text-center" style={{ background: "linear-gradient(to top, rgba(13,12,11,0.85) 45%, transparent 100%)" }}>
+                        <span className="font-[family-name:var(--font-cinzel)] font-semibold text-foreground" style={{ fontSize: "15px" }}>
+                          {p.vikingName}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {hypeVoteFor && (
+                <div className="mt-3">
+                  <label className="block text-xs text-muted mb-1">Add a short message (optional)</label>
+                  <input
+                    type="text"
+                    maxLength={300}
+                    value={hypeVoteMessage}
+                    onChange={(e) => { setHypeVoteMessage(e.target.value); saveDraft({ hypeVoteMessage: e.target.value }); }}
+                    placeholder="e.g. Great week, warrior!"
+                    className="w-full bg-background border border-card-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-fire/50"
+                  />
+                  <p className="text-[10px] text-muted mt-0.5">They’ll see this when scores are settled.</p>
+                </div>
+              )}
+              {!hypeVoteFor && (
+                <p className="text-xs text-muted mt-2">Tap a warrior to give your shield — or withhold it this week.</p>
+              )}
+            </section>
+
+            <div className="my-8 flex justify-center">
+              <Image unoptimized src="/images/ui/dividers/long.png" alt="" width={2000} height={12} className="h-auto opacity-60" style={{ width: "97%" }} />
+            </div>
+          </>
+        )}
 
         {/* Submit */}
         {error && (
@@ -794,7 +818,7 @@ export default function SubmitPage() {
 
         <button
           type="submit"
-          disabled={submitting || !kmRun}
+          disabled={submitting}
           className="w-full hover:opacity-90 disabled:opacity-75 disabled:cursor-not-allowed transition-opacity"
         >
           <Image

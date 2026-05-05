@@ -42,9 +42,6 @@ export async function POST(request: NextRequest) {
     if (!week) {
       return NextResponse.json({ error: "Week not found" }, { status: 404 });
     }
-    if (week.isLocked) {
-      return NextResponse.json({ error: "This week is locked" }, { status: 403 });
-    }
 
     const existing = await db
       .select()
@@ -98,11 +95,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Auto-score if all onboarded players have now submitted
-    const allPlayers = await db.select().from(players).where(eq(players.onboardingComplete, true));
-    const weekSubs = await db.select().from(submissions).where(eq(submissions.weekId, weekId));
-    if (weekSubs.length >= allPlayers.length && allPlayers.length > 0) {
-      await scoreWeek(weekId);
+    // Auto-score if all onboarded players have now submitted (skip for already-locked weeks)
+    if (!week.isLocked) {
+      const allPlayers = await db.select().from(players).where(eq(players.onboardingComplete, true));
+      const weekSubs = await db.select().from(submissions).where(eq(submissions.weekId, weekId));
+      if (weekSubs.length >= allPlayers.length && allPlayers.length > 0) {
+        await scoreWeek(weekId);
+      }
     }
 
     return NextResponse.json({ submission, isLate });

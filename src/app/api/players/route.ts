@@ -103,6 +103,13 @@ export async function GET(request: NextRequest) {
         };
       }).filter(Boolean).sort((a, b) => (b?.weekNumber ?? 0) - (a?.weekNumber ?? 0));
 
+      // Missed weeks: past locked weeks where this player has no submission
+      const submittedWeekIds = new Set(subs.map(s => s.weekId));
+      const missedWeeks = allWeeks
+        .filter(w => w.isLocked && !submittedWeekIds.has(w.id))
+        .sort((a, b) => a.weekNumber - b.weekNumber)
+        .map(w => ({ id: w.id, weekNumber: w.weekNumber, startDate: w.startDate, endDate: w.endDate }));
+
       const totalKm = subs.reduce((sum, s) => sum + s.kmRun, 0);
       const totalRuns = subs.reduce((sum, s) => sum + s.runsCount, 0);
       const totalGym = subs.reduce((sum, s) => sum + s.gymSessions, 0);
@@ -129,6 +136,7 @@ export async function GET(request: NextRequest) {
         conquests: playerConquests,
         questLog,
         shieldMessagesByWeek,
+        missedWeeks,
       });
     }
 

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { weeks, submissions } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { scoreWeek } from "@/lib/scoring";
+import { getWeekDeadline } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -11,37 +12,38 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Find the most recent unlocked week that has at least one submission.
-    // This avoids timezone-boundary issues where getCurrentWeekNumber()
-    // might already return the next week at Sunday-midnight CET.
+    // Score ALL unlocked weeks whose deadline has passed and that have
+    // at least one submission.  Process oldest first so cumulative XP
+    // totals stay correct.
+    const now = new Date();
     const unlockedWeeks = await db
       .select()
       .from(weeks)
       .where(eq(weeks.isLocked, false))
-      .orderBy(desc(weeks.weekNumber));
+      .orderBy(asc(weeks.weekNumber));
 
-    let weekToScore: typeof unlockedWeeks[0] | null = null;
+    const scored: { weekNumber: number; message: string }[] = [];
+
     for (const w of unlockedWeeks) {
+      const deadline = getWeekDeadline(w.endDate);
+      if (now <= deadline) continue; // week still open
+
       const subs = await db
         .select({ id: submissions.id })
         .from(submissions)
         .where(eq(submissions.weekId, w.id))
         .limit(1);
-      if (subs.length > 0) {
-        weekToScore = w;
-        break;
-      }
+      if (subs.length === 0) continue; // no submissions
+
+      const result = await scoreWeek(w.id);
+      scored.push({ weekNumber: w.weekNumber, message: result.message });
     }
 
-    if (!weekToScore) {
-      return NextResponse.json({ message: "No unlocked week with submissions found" });
+    if (scored.length === 0) {
+      return NextResponse.json({ message: "No weeks to score" });
     }
 
-    const result = await scoreWeek(weekToScore.id);
-    return NextResponse.json({
-      message: result.message,
-      weekNumber: weekToScore.weekNumber,
-    });
+    return NextResponse.json({ scored });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Cron scoring failed";
     return NextResponse.json({ error: message }, { status: 500 });
