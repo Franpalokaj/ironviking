@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import BottomNav from "@/components/BottomNav";
-import { ACTIVITY_MULTIPLIERS, getCurrentWeekNumber, SIGIL_EMOJIS } from "@/lib/constants";
-import type { Sigil } from "@/lib/constants";
+import { ACTIVITY_MULTIPLIERS, getCurrentWeekNumber, SIGIL_IMAGES } from "@/lib/constants";
 import {
   LineChart,
   Line,
@@ -63,6 +63,28 @@ const CHART_COLORS = [
   "#a8a8a8", // silver
   "#9b6fd4", // bright purple
 ];
+
+interface TooltipEntry {
+  dataKey: string;
+  name: string;
+  value: number;
+  color: string;
+}
+
+function RankedTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipEntry[]; label?: string }) {
+  if (!active || !payload?.length) return null;
+  const sorted = [...payload].sort((a, b) => b.value - a.value);
+  return (
+    <div style={{ background: "#1a1816", border: "1px solid #2a2520", borderRadius: "8px", padding: "8px 12px", fontSize: "12px" }}>
+      <p style={{ color: "#8a8070", fontWeight: "bold", marginBottom: "4px" }}>{label}</p>
+      {sorted.map((entry) => (
+        <p key={entry.dataKey} style={{ color: entry.color, margin: "2px 0" }}>
+          {entry.name}: {entry.value}
+        </p>
+      ))}
+    </div>
+  );
+}
 
 function getSubmissionValue(s: Submission, key: ActivityKey): number {
   if (key === "equivKm") {
@@ -156,7 +178,7 @@ export default function StatsPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-6 pb-24">
+    <div className="max-w-lg sm:max-w-4xl mx-auto px-4 pt-6 pb-24">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
@@ -193,7 +215,7 @@ export default function StatsPage() {
           Cumulative {activity.label} ({activity.unit})
         </p>
         {chartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={320}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={320} className="!h-[min(70vh,600px)] sm:!h-[min(75vh,800px)]">
             <LineChart data={chartData}>
               <XAxis
                 dataKey="week"
@@ -208,16 +230,7 @@ export default function StatsPage() {
                 axisLine={{ stroke: "#2a2520" }}
                 width={40}
               />
-              <Tooltip
-                contentStyle={{
-                  background: "#1a1816",
-                  border: "1px solid #2a2520",
-                  borderRadius: "8px",
-                  color: "#e8e0d4",
-                  fontSize: "12px",
-                }}
-                labelStyle={{ color: "#8a8070", fontWeight: "bold" }}
-              />
+              <Tooltip content={<RankedTooltip />} />
               {players.map((player, i) => (
                 <Line
                   key={player.id}
@@ -241,20 +254,23 @@ export default function StatsPage() {
 
       {/* Legend */}
       <div className="grid grid-cols-2 gap-2 mb-8">
-        {players.map((player, i) => (
-          <div key={player.id} className="flex items-center gap-2 text-sm">
-            <span
-              className="w-3 h-3 rounded-full shrink-0"
-              style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
-            />
-            <span className="text-foreground truncate">
-              {player.sigil && SIGIL_EMOJIS[player.sigil as Sigil]
-                ? `${SIGIL_EMOJIS[player.sigil as Sigil]} `
-                : ""}
-              {player.vikingName || `Viking ${player.id}`}
-            </span>
-          </div>
-        ))}
+        {players.map((player, i) => {
+          const sigilSrc = player.sigil ? SIGIL_IMAGES[player.sigil] : null;
+          return (
+            <div key={player.id} className="flex items-center gap-2 text-sm">
+              <span
+                className="w-3 h-3 rounded-full shrink-0"
+                style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
+              />
+              {sigilSrc && (
+                <Image unoptimized src={sigilSrc} alt="" width={18} height={18} className="shrink-0" />
+              )}
+              <span className="text-foreground truncate">
+                {player.vikingName || `Viking ${player.id}`}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       <BottomNav active="board" profileId={session?.playerId} />
