@@ -9,6 +9,7 @@ import {
   challenges,
   milestones,
   conquests,
+  benchmarkGoals,
 } from "@/db/schema";
 import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import {
@@ -481,14 +482,20 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
       (rawWithoutFirst * berserkerMap[p.id] * weekMultiplier * catchUpMult + firstBonus) * 10
     ) / 10;
 
-    // Cumulative XP from scratch — rescore-safe; conquest XP can't be lost by re-running
+    // Cumulative XP from scratch — rescore-safe; conquest/benchmark XP can't be lost by re-running
     const completedConquests = await db
       .select({ xpReward: conquests.xpReward })
       .from(conquests)
       .where(and(eq(conquests.playerId, p.id), eq(conquests.completed, true)));
     const conquestXp = completedConquests.reduce((sum, c) => sum + c.xpReward, 0);
 
-    const newXp = prevWeeklyXp + conquestXp + totalFinal;
+    const achievedGoals = await db
+      .select({ xpReward: benchmarkGoals.xpReward })
+      .from(benchmarkGoals)
+      .where(and(eq(benchmarkGoals.playerId, p.id), eq(benchmarkGoals.achieved, true)));
+    const benchmarkXp = achievedGoals.reduce((sum, g) => sum + g.xpReward, 0);
+
+    const newXp = prevWeeklyXp + conquestXp + benchmarkXp + totalFinal;
     const title = getTitleForXP(newXp);
 
     await db.insert(weeklyScores).values({

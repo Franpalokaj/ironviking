@@ -129,6 +129,7 @@ export const BUDDY_TEAM_NAMES: Record<number, string> = {
   1: "Oer Camp",
   2: "JonKaj",
   3: "Nameless",
+  4: "Bird & Fish",
 };
 
 export const SIGILS = [
