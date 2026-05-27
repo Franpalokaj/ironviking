@@ -719,6 +719,41 @@ export default function ProfilePage() {
                     </div>
                   );
                 })}
+                {(() => {
+                  const completedConquests = conquests.filter(c => c.completed);
+                  const achievedGoals = benchmarkGoalsList.filter(g => g.achieved);
+                  const totalBonus = completedConquests.reduce((s, c) => s + c.xpReward, 0)
+                    + achievedGoals.reduce((s, g) => s + g.xpReward, 0);
+                  if (totalBonus === 0) return null;
+                  return (
+                    <div className="bg-card border border-gold/20 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-muted">
+                          Bonus XP
+                        </span>
+                        <span className="text-gold font-bold text-sm">
+                          {totalBonus} XP
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted leading-relaxed">
+                        {completedConquests.map((c, i) => (
+                          <span key={`c-${i}`}>
+                            {i > 0 && <span className="mx-1 opacity-40">·</span>}
+                            <span className="text-foreground/80">{c.title}</span>
+                            <span className="text-gold ml-0.5">+{c.xpReward}</span>
+                          </span>
+                        ))}
+                        {achievedGoals.map((g, i) => (
+                          <span key={`g-${i}`}>
+                            {(i > 0 || completedConquests.length > 0) && <span className="mx-1 opacity-40">·</span>}
+                            <span className="text-foreground/80">{g.skill} goal</span>
+                            <span className="text-gold ml-0.5">+{g.xpReward}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </>
