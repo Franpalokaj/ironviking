@@ -650,23 +650,32 @@ export default function DashboardPage() {
         )}
 
         {/* Nav links */}
-        <div className="flex gap-4 mb-8">
+        <div className="grid grid-cols-3 gap-3 mb-8">
           <button
             onClick={() => router.push("/challenges")}
-            className="relative hover:opacity-90 transition-opacity flex-1"
+            className="relative hover:opacity-90 transition-opacity"
           >
             <Image unoptimized src="/images/ui/buttons/secondary.png" alt="" width={400} height={133} className="w-full h-auto" />
-            <span className="absolute inset-0 flex items-center justify-center text-base font-[family-name:var(--font-cinzel)] font-semibold text-foreground">
-              Challenge Board
+            <span className="absolute inset-0 flex items-center justify-center text-sm font-[family-name:var(--font-cinzel)] font-semibold text-foreground">
+              Challenges
+            </span>
+          </button>
+          <button
+            onClick={() => router.push("/stats")}
+            className="relative hover:opacity-90 transition-opacity"
+          >
+            <Image unoptimized src="/images/ui/buttons/secondary.png" alt="" width={400} height={133} className="w-full h-auto" />
+            <span className="absolute inset-0 flex items-center justify-center text-sm font-[family-name:var(--font-cinzel)] font-semibold text-foreground">
+              Activity Stats
             </span>
           </button>
           <button
             onClick={() => router.push("/guide")}
-            className="relative hover:opacity-90 transition-opacity flex-1"
+            className="relative hover:opacity-90 transition-opacity"
           >
             <Image unoptimized src="/images/ui/buttons/secondary.png" alt="" width={400} height={133} className="w-full h-auto" />
-            <span className="absolute inset-0 flex items-center justify-center text-base font-[family-name:var(--font-cinzel)] font-semibold text-foreground">
-              Training Guide
+            <span className="absolute inset-0 flex items-center justify-center text-sm font-[family-name:var(--font-cinzel)] font-semibold text-foreground">
+              Guide
             </span>
           </button>
         </div>
