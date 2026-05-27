@@ -22,15 +22,17 @@ interface LeaderboardRevealProps {
 
 const REALM_MESSAGES: Record<number, { up: string; down: string; same: string }> = {
   1: { up: "You sit among the gods. Asgard bows to its champion.", down: "You sit among the gods. Asgard bows to its champion.", same: "You hold Asgard. The gods nod." },
-  2: { up: "Vanaheim honours your rising strength, warrior.", down: "The halls of Vanaheim await you. Reclaim them.", same: "Vanaheim holds firm. Keep pushing." },
-  3: { up: "The light of Alfheim shines upon you. Well earned.", down: "Alfheim remains within reach. One more push.", same: "Alfheim recognises your steady blade." },
+  2: { up: "The light of Alfheim shines upon you. Well earned.", down: "Alfheim remains within reach. One more push.", same: "Alfheim recognises your steady blade." },
+  3: { up: "Vanaheim honours your rising strength, warrior.", down: "The halls of Vanaheim await you. Reclaim them.", same: "Vanaheim holds firm. Keep pushing." },
   4: { up: "You hold the line in Midgard. Onwards.", down: "Midgard is a battlefield. Fight through it.", same: "Midgard endures. So do you." },
   5: { up: "The frost giants grow bold. Reclaim your honour.", down: "Jotunheim tests the worthy. You will rise.", same: "Jotunheim's cold reminds you why you train." },
-  6: { up: "You've clawed from the depths. The gods took notice.", down: "The mists of Niflheim surround you. Rise, warrior.", same: "Niflheim is not your fate. Rise." },
+  6: { up: "The dark forges of Svartalfheim temper you. Rise.", down: "Svartalfheim's shadow falls. Climb back to the light.", same: "The dwarves watch. Prove your worth." },
+  7: { up: "You've clawed from the depths. The gods took notice.", down: "The mists of Niflheim surround you. Rise, warrior.", same: "Niflheim is not your fate. Rise." },
+  8: { up: "Even from Helheim, warriors return. Keep fighting.", down: "The dead do not rest here. Neither should you.", same: "Helheim holds you. Break free." },
 };
 
 function getRankMessage(rank: number, prevRank: number): string {
-  const msgs = REALM_MESSAGES[rank] || REALM_MESSAGES[6];
+  const msgs = REALM_MESSAGES[rank] || REALM_MESSAGES[8];
   if (rank < prevRank) return msgs.up;
   if (rank > prevRank) return msgs.down;
   return msgs.same;

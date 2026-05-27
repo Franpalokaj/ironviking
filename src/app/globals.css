@@ -10,6 +10,8 @@
   --bronze: #b87333;
   --stone: #6b6b6b;
   --purple: #5a3e6b;
+  --emerald: #4a9e6b;
+  --ember: #8b5e3c;
   --card: #1a1816;
   --card-border: #2a2520;
   --muted: #8a8070;
@@ -33,6 +35,8 @@
   --color-bronze: var(--bronze);
   --color-stone: var(--stone);
   --color-purple: var(--purple);
+  --color-emerald: var(--emerald);
+  --color-ember: var(--ember);
   --color-card: var(--card);
   --color-card-border: var(--card-border);
   --color-muted: var(--muted);

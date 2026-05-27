@@ -5,11 +5,13 @@ import { getRealmForRank, REALM_IMAGES } from "@/lib/constants";
 
 const REALM_COLORS: Record<string, string> = {
   gold: "text-gold",
+  emerald: "text-emerald",
   silver: "text-silver",
   bronze: "text-bronze",
   stone: "text-stone",
-  purple: "text-purple",
+  ember: "text-ember",
   ice: "text-ice",
+  purple: "text-purple",
 };
 
 interface Props {

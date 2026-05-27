@@ -19,7 +19,7 @@ export function getWeekDeadline(endDate: string): Date {
   return new Date(`${endDate}T23:59:59${offsetHours >= 0 ? "+" : ""}${String(offsetHours).padStart(2, "0")}:00`);
 }
 export const TOTAL_WEEKS = 28;
-export const NUM_PLAYERS = 6;
+export const NUM_PLAYERS = 8;
 
 export const TITLES = [
   { threshold: 0, name: "Thrall", description: "A bondsman. The journey begins." },
@@ -71,20 +71,21 @@ export function getNextTitle(xp: number): (typeof TITLES[number]) | null {
 
 export const REALMS = [
   { position: 1, name: "Asgard", color: "gold", cssClass: "text-gold" },
-  { position: 2, name: "Vanaheim", color: "silver", cssClass: "text-silver" },
-  { position: 3, name: "Midgard", color: "bronze", cssClass: "text-bronze" },
-  { position: 4, name: "Jotunheim", color: "stone", cssClass: "text-stone" },
-  { position: 5, name: "Helheim", color: "purple", cssClass: "text-purple" },
-  { position: 6, name: "Niflheim", color: "ice", cssClass: "text-ice" },
-  { position: 7, name: "Muspelheim", color: "purple", cssClass: "text-purple" },
+  { position: 2, name: "Alfheim", color: "emerald", cssClass: "text-emerald" },
+  { position: 3, name: "Vanaheim", color: "silver", cssClass: "text-silver" },
+  { position: 4, name: "Midgard", color: "bronze", cssClass: "text-bronze" },
+  { position: 5, name: "Jotunheim", color: "stone", cssClass: "text-stone" },
+  { position: 6, name: "Svartalfheim", color: "ember", cssClass: "text-ember" },
+  { position: 7, name: "Niflheim", color: "ice", cssClass: "text-ice" },
+  { position: 8, name: "Helheim", color: "purple", cssClass: "text-purple" },
 ] as const;
 
 export function getRealmForRank(rank: number): typeof REALMS[number] {
-  return REALMS[Math.min(rank - 1, 6)];
+  return REALMS[Math.min(rank - 1, 7)];
 }
 
-export const RANK_BONUSES = [30, 22, 16, 10, 5, 2] as const;
-export const COMPETITIVE_BONUSES = [30, 20, 15, 10, 5, 0] as const;
+export const RANK_BONUSES = [30, 24, 19, 14, 10, 6, 3, 0] as const;
+export const COMPETITIVE_BONUSES = [30, 22, 16, 12, 8, 4, 2, 0] as const;
 export const COLLABORATIVE_BONUS = 10;
 
 // Buddy challenge XP = 2× solo/competitive values
@@ -93,7 +94,7 @@ export const BUDDY_DIFFICULTY_POINTS: Record<Difficulty, number> = {
   hard:   50,
   epic:   80,
 };
-export const BUDDY_COMPETITIVE_BONUSES = [60, 40, 30, 20, 10, 0] as const;
+export const BUDDY_COMPETITIVE_BONUSES = [60, 44, 32, 24, 16, 8, 4, 0] as const;
 export const SOLO_CHALLENGE_BONUS = 15;
 export const SHIELD_BONUS = 8; // kept for reference only; scoring now uses SHIELD_BONUS_PCT
 export const SHIELD_BONUS_PCT = 0.05; // 5% of pre-shield raw XP per shield received
@@ -177,12 +178,13 @@ export const TITLE_IMAGES: Record<string, string> = {
 
 export const REALM_IMAGES: Record<string, string> = {
   Asgard: "/images/realms/asgard.png",
+  Alfheim: "/images/realms/alfheim.png",
   Vanaheim: "/images/realms/vanaheim.png",
   Midgard: "/images/realms/midgard.png",
   Jotunheim: "/images/realms/jotunheim.png",
-  Helheim: "/images/realms/helheim.png",
+  Svartalfheim: "/images/realms/svartalfheim.png",
   Niflheim: "/images/realms/niflheim.png",
-  Muspelheim: "/images/realms/muspelheim.png",
+  Helheim: "/images/realms/helheim.png",
 };
 
 export const DEFAULT_CONQUESTS = [

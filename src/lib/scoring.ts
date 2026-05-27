@@ -113,8 +113,8 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
   // STEP 4: Rank bonus
   const rankBonusMap: Record<number, number> = {};
   for (const p of allPlayers) {
-    const rank = rankMap[p.id] || 6;
-    rankBonusMap[p.id] = RANK_BONUSES[Math.min(rank - 1, 5)];
+    const rank = rankMap[p.id] || 8;
+    rankBonusMap[p.id] = RANK_BONUSES[Math.min(rank - 1, 7)];
   }
 
   // STEP 5: Challenge points
@@ -178,7 +178,7 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
         if (competitiveResults[j].result === r.result) tieRank = j;
         else break;
       }
-      secondPtsMap[r.playerId] = COMPETITIVE_BONUSES[Math.min(tieRank, 5)];
+      secondPtsMap[r.playerId] = COMPETITIVE_BONUSES[Math.min(tieRank, 7)];
     });
   }
 
@@ -279,7 +279,7 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
           if (rankedTeams[j].result === team.result) tieRank = j;
           else break;
         }
-        const bonus = BUDDY_COMPETITIVE_BONUSES[Math.min(tieRank, 5)];
+        const bonus = BUDDY_COMPETITIVE_BONUSES[Math.min(tieRank, 7)];
         for (const pid of team.playerIds) {
           buddyPtsMap[pid] = bonus;
         }
@@ -365,52 +365,82 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
     shieldMap[p.id] = Math.round(preShieldRaw * SHIELD_BONUS_PCT * received * 10) / 10;
   }
 
-  // STEP 11: Berserker check — based on total weekly XP rank
+  // STEP 11: Berserker check — last in total weekly XP among submitters for 2 consecutive weeks
   const berserkerMap: Record<number, number> = {};
   for (const p of allPlayers) {
     berserkerMap[p.id] = 1.0;
   }
 
   if (week.weekNumber >= 3) {
-    const prevAllScores = await db
-      .select({
-        playerId: weeklyScores.playerId,
-        totalFinal: weeklyScores.totalFinal,
-        weekNumber: weeks.weekNumber,
-      })
-      .from(weeklyScores)
-      .innerJoin(weeks, eq(weeklyScores.weekId, weeks.id))
+    const prevWeekRows = await db
+      .select({ id: weeks.id, weekNumber: weeks.weekNumber })
+      .from(weeks)
       .where(and(
         sql`${weeks.weekNumber} >= ${week.weekNumber - 2}`,
         sql`${weeks.weekNumber} < ${week.weekNumber}`
       ));
 
-    const scoresByWeek: Record<number, { playerId: number; totalFinal: number }[]> = {};
-    for (const s of prevAllScores) {
-      if (!scoresByWeek[s.weekNumber]) scoresByWeek[s.weekNumber] = [];
-      scoresByWeek[s.weekNumber].push({ playerId: s.playerId, totalFinal: s.totalFinal });
-    }
+    if (prevWeekRows.length === 2) {
+      const prevWeekIds = prevWeekRows.map(w => w.id);
+      const prevWeekNumMap = Object.fromEntries(prevWeekRows.map(w => [w.id, w.weekNumber]));
 
-    const prevWeekNums = Object.keys(scoresByWeek).map(Number);
+      const prevAllScores = await db
+        .select({
+          playerId: weeklyScores.playerId,
+          totalFinal: weeklyScores.totalFinal,
+          weekId: weeklyScores.weekId,
+        })
+        .from(weeklyScores)
+        .where(inArray(weeklyScores.weekId, prevWeekIds));
 
-    if (prevWeekNums.length === 2) {
-      const xpRank: Record<number, Record<number, number>> = {};
-      for (const wn of prevWeekNums) {
-        const sorted = [...scoresByWeek[wn]].sort((a, b) => b.totalFinal - a.totalFinal);
-        xpRank[wn] = {};
-        for (let i = 0; i < sorted.length; i++) {
-          let rank = i + 1;
-          for (let j = i - 1; j >= 0; j--) {
-            if (sorted[j].totalFinal === sorted[i].totalFinal) rank = j + 1;
-            else break;
-          }
-          xpRank[wn][sorted[i].playerId] = rank;
-        }
+      // Find who actually submitted in each previous week
+      const prevSubs = await db
+        .select({ playerId: submissions.playerId, weekId: submissions.weekId })
+        .from(submissions)
+        .where(inArray(submissions.weekId, prevWeekIds));
+
+      const submittedByWeek: Record<number, Set<number>> = {};
+      for (const w of prevWeekRows) submittedByWeek[w.weekNumber] = new Set();
+      for (const s of prevSubs) {
+        const wn = prevWeekNumMap[s.weekId];
+        if (wn) submittedByWeek[wn].add(s.playerId);
       }
 
-      for (const p of allPlayers) {
-        if (prevWeekNums.every(wn => (xpRank[wn][p.id] ?? 0) >= 6)) {
-          berserkerMap[p.id] = BERSERKER_MULTIPLIER;
+      // Group scores by week, only include players who submitted
+      const scoresByWeek: Record<number, { playerId: number; totalFinal: number }[]> = {};
+      for (const s of prevAllScores) {
+        const wn = prevWeekNumMap[s.weekId];
+        if (!wn || !submittedByWeek[wn]?.has(s.playerId)) continue;
+        if (!scoresByWeek[wn]) scoresByWeek[wn] = [];
+        scoresByWeek[wn].push({ playerId: s.playerId, totalFinal: s.totalFinal });
+      }
+
+      const prevWeekNums = Object.keys(scoresByWeek).map(Number);
+
+      if (prevWeekNums.length === 2) {
+        const xpRank: Record<number, Record<number, number>> = {};
+        const submitterCount: Record<number, number> = {};
+        for (const wn of prevWeekNums) {
+          const sorted = [...scoresByWeek[wn]].sort((a, b) => b.totalFinal - a.totalFinal);
+          submitterCount[wn] = sorted.length;
+          xpRank[wn] = {};
+          for (let i = 0; i < sorted.length; i++) {
+            let rank = i + 1;
+            for (let j = i - 1; j >= 0; j--) {
+              if (sorted[j].totalFinal === sorted[i].totalFinal) rank = j + 1;
+              else break;
+            }
+            xpRank[wn][sorted[i].playerId] = rank;
+          }
+        }
+
+        for (const p of allPlayers) {
+          if (prevWeekNums.every(wn => {
+            const rank = xpRank[wn][p.id];
+            return rank !== undefined && rank >= submitterCount[wn];
+          })) {
+            berserkerMap[p.id] = BERSERKER_MULTIPLIER;
+          }
         }
       }
     }
