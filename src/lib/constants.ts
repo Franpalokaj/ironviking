@@ -37,7 +37,7 @@ export const TITLE_STYLES: Record<string, { color: string; rune: string; icon: s
   Footsoldier:     { color: "text-footsoldier",   rune: "ᚱ", icon: "🗡️" },
   "Shield-Bearer": { color: "text-shieldbearer",  rune: "ᛊ", icon: "⚜️", glow: true, glowClass: "shieldbearer-glow" },
   Raider:          { color: "text-raider",         rune: "ᚢ", icon: "☠️", glow: true, glowClass: "raider-glow" },
-  Jarl:            { color: "text-jarl",           rune: "ᛃ", icon: "🦅", glow: true, glowClass: "jarl-glow" },
+  Jarl:            { color: "text-jarl",           rune: "ᛃ", icon: "🦅" },
   Einherjar:       { color: "text-einherjar",      rune: "ᛟ", icon: "🌟", glow: true, glowClass: "einherjar-glow" },
 };
 
