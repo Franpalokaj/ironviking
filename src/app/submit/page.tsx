@@ -628,7 +628,9 @@ function SubmitPage() {
 
                 {secondChallengeAttempted && (() => {
                   const title = (secondChallenge.title || "").toLowerCase();
-                  const isGymCount = title.includes("gym");
+                  const isGymCount = secondChallenge.dataType === "count" && title.includes("gym");
+                  const isRunCount = secondChallenge.dataType === "count" && (title.includes("run") || title.includes("log"));
+                  const isAutoCount = isGymCount || isRunCount;
                   const autoCount = isGymCount ? gymSessions : runsCount;
                   const autoLabel = isGymCount ? "gym session" : "run";
                   return (
@@ -637,10 +639,10 @@ function SubmitPage() {
                       Your result
                       {secondChallenge.dataType === "time_mmss" && " (mm:ss)"}
                       {secondChallenge.dataType === "distance_km" && " (km)"}
-                      {secondChallenge.dataType === "count" && ` (${autoLabel}s — auto-filled from above)`}
+                      {isAutoCount && ` (${autoLabel}s — auto-filled from above)`}
                       {secondChallenge.dataType === "weight_kg" && " (kg)"}
                     </label>
-                    {secondChallenge.dataType === "count" ? (
+                    {isAutoCount ? (
                       <div className="w-full bg-background border border-card-border rounded-lg px-4 py-3 text-muted text-sm">
                         {autoCount} {autoLabel}{autoCount !== 1 ? "s" : ""} — taken from above
                       </div>
@@ -685,10 +687,25 @@ function SubmitPage() {
                       <span className="absolute inset-0 flex items-center justify-center text-sm font-[family-name:var(--font-cinzel)] font-semibold text-foreground">No</span>
                     </button>
                   </div>
-                ) : (
+                ) : secondChallenge.dataType === "distance_km" ? (
                   <div className="text-xs text-muted">
                     Your km from Section 1 counts toward the group target.
-                    {secondChallenge.targetValue && ` Target: ${secondChallenge.targetValue} ${secondChallenge.dataType === "distance_km" ? "km" : ""}`}
+                    {secondChallenge.targetValue && ` Target: ${secondChallenge.targetValue} km`}
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs text-muted mb-1">
+                      Your contribution
+                      {secondChallenge.targetValue && ` (group target: ${secondChallenge.targetValue})`}
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      value={secondChallengeResult}
+                      onChange={(e) => { setSecondChallengeResult(e.target.value); setSecondChallengeAttempted(!!e.target.value); saveDraft({ secondChallengeResult: e.target.value, secondChallengeAttempted: !!e.target.value }); }}
+                      className="w-full bg-background border border-card-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:border-fire/50"
+                      placeholder="0"
+                    />
                   </div>
                 )}
               </div>

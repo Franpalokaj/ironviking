@@ -154,7 +154,7 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
             const title = (secondChallenge.title || "").toLowerCase();
             if (title.includes("gym")) {
               result = sub.gymSessions ?? null;
-            } else {
+            } else if (title.includes("run") || title.includes("log")) {
               result = sub.runsCount ?? null;
             }
           }
