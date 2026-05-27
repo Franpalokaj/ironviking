@@ -23,6 +23,7 @@
   --raider: #e85a30;
   --jarl: #daa520;
   --einherjar: #ffd700;
+  --aesir: #e8e0ff;
 }
 
 @theme inline {
@@ -47,6 +48,7 @@
   --color-raider: var(--raider);
   --color-jarl: var(--jarl);
   --color-einherjar: var(--einherjar);
+  --color-aesir: var(--aesir);
   --font-heading: var(--font-cinzel);
   --font-body: var(--font-crimson);
 }
@@ -122,6 +124,10 @@ h1, h2, h3, h4, h5, h6 {
 
 .einherjar-glow {
   text-shadow: 0 0 12px rgba(255, 215, 0, 0.7), 0 0 30px rgba(255, 215, 0, 0.3), 0 0 50px rgba(255, 215, 0, 0.1);
+}
+
+.aesir-glow {
+  text-shadow: 0 0 14px rgba(232, 224, 255, 0.8), 0 0 35px rgba(200, 180, 255, 0.4), 0 0 60px rgba(180, 160, 255, 0.15);
 }
 
 @keyframes berserker-glow {

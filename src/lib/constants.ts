@@ -29,6 +29,7 @@ export const TITLES = [
   { threshold: 1100, name: "Raider", description: "Active, capable, going on raids." },
   { threshold: 1700, name: "Jarl", description: "A chieftain. Earned through consistent deeds." },
   { threshold: 2500, name: "Einherjar", description: "Chosen by Odin himself. Destined for Valhalla." },
+  { threshold: 5000, name: "Aesir", description: "Ascended to the realm of the gods." },
 ] as const;
 
 export const TITLE_STYLES: Record<string, { color: string; rune: string; icon: string; glow?: boolean; glowClass?: string }> = {
@@ -39,6 +40,7 @@ export const TITLE_STYLES: Record<string, { color: string; rune: string; icon: s
   Raider:          { color: "text-raider",         rune: "ᚢ", icon: "☠️", glow: true, glowClass: "raider-glow" },
   Jarl:            { color: "text-jarl",           rune: "ᛃ", icon: "🦅" },
   Einherjar:       { color: "text-einherjar",      rune: "ᛟ", icon: "🌟", glow: true, glowClass: "einherjar-glow" },
+  Aesir:           { color: "text-aesir",          rune: "ᚨ", icon: "⚡", glow: true, glowClass: "aesir-glow" },
 };
 
 export type Difficulty = "normal" | "hard" | "epic";
@@ -174,6 +176,7 @@ export const TITLE_IMAGES: Record<string, string> = {
   Raider: "/images/titles/raider.png",
   Jarl: "/images/titles/jarl.png",
   Einherjar: "/images/titles/einherjar.png",
+  Aesir: "/images/titles/aesir.png",
 };
 
 export const REALM_IMAGES: Record<string, string> = {
