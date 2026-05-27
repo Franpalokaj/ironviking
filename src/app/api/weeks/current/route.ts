@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { weeks, challenges, weeklyScores, players } from "@/db/schema";
+import { weeks, challenges, weeklyScores } from "@/db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
-import { BERSERKER_MULTIPLIER } from "@/lib/constants";
 import { getCurrentWeekNumber } from "@/lib/constants";
 
 export async function GET() {
@@ -57,29 +56,50 @@ export async function GET() {
     }
 
     // Compute which players are in berserker mode for the CURRENT week
-    // (last in both of the two most recent scored weeks)
+    // (last in total weekly XP in both of the two most recent scored weeks)
     const berserkerPlayerIds: number[] = [];
     if (week.weekNumber >= 3 && lastScoredWeek && lastScoredWeek.weekNumber >= 2) {
-      const allPlayers = await db
-        .select({ id: players.id })
-        .from(players)
-        .where(eq(players.onboardingComplete, true));
+      const prevAllScores = await db
+        .select({
+          playerId: weeklyScores.playerId,
+          totalFinal: weeklyScores.totalFinal,
+          weekNumber: weeks.weekNumber,
+        })
+        .from(weeklyScores)
+        .innerJoin(weeks, eq(weeklyScores.weekId, weeks.id))
+        .where(and(
+          sql`${weeks.weekNumber} >= ${week.weekNumber - 2}`,
+          sql`${weeks.weekNumber} < ${week.weekNumber}`
+        ));
 
-      for (const p of allPlayers) {
-        const prevScores = await db
-          .select({ realmRankWeek: weeklyScores.realmRankWeek })
-          .from(weeklyScores)
-          .innerJoin(weeks, eq(weeklyScores.weekId, weeks.id))
-          .where(and(
-            eq(weeklyScores.playerId, p.id),
-            sql`${weeks.weekNumber} >= ${week.weekNumber - 2}`,
-            sql`${weeks.weekNumber} < ${week.weekNumber}`
-          ))
-          .orderBy(desc(weeks.weekNumber))
-          .limit(2);
+      const scoresByWeek: Record<number, { playerId: number; totalFinal: number }[]> = {};
+      for (const s of prevAllScores) {
+        if (!scoresByWeek[s.weekNumber]) scoresByWeek[s.weekNumber] = [];
+        scoresByWeek[s.weekNumber].push({ playerId: s.playerId, totalFinal: s.totalFinal });
+      }
 
-        if (prevScores.length === 2 && prevScores.every(s => s.realmRankWeek >= 6)) {
-          berserkerPlayerIds.push(p.id);
+      const prevWeekNums = Object.keys(scoresByWeek).map(Number);
+
+      if (prevWeekNums.length === 2) {
+        const xpRank: Record<number, Record<number, number>> = {};
+        for (const wn of prevWeekNums) {
+          const sorted = [...scoresByWeek[wn]].sort((a, b) => b.totalFinal - a.totalFinal);
+          xpRank[wn] = {};
+          for (let i = 0; i < sorted.length; i++) {
+            let rank = i + 1;
+            for (let j = i - 1; j >= 0; j--) {
+              if (sorted[j].totalFinal === sorted[i].totalFinal) rank = j + 1;
+              else break;
+            }
+            xpRank[wn][sorted[i].playerId] = rank;
+          }
+        }
+
+        const uniquePlayerIds = [...new Set(prevAllScores.map(s => s.playerId))];
+        for (const pid of uniquePlayerIds) {
+          if (prevWeekNums.every(wn => (xpRank[wn][pid] ?? 0) >= 6)) {
+            berserkerPlayerIds.push(pid);
+          }
         }
       }
     }

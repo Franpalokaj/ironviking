@@ -10,6 +10,7 @@ interface PlayerData {
   id: number;
   vikingName: string;
   sigil: string;
+  catchUpXpMultiplier: number;
 }
 
 interface Stats {
@@ -48,6 +49,7 @@ interface Score {
 }
 
 interface Submission {
+  id: number;
   weekId: number;
   kmRun: number;
   runsCount: number;
@@ -217,6 +219,20 @@ export default function ProfilePage() {
     }
   }
 
+  async function removeSubmission(submissionId: number, weekNumber: number) {
+    if (!confirm(`Remove submission for Week ${weekNumber}? The player will be able to resubmit it as a late entry.`)) return;
+    try {
+      const res = await fetch("/api/admin/submissions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionId }),
+      });
+      if (res.ok) loadData();
+    } catch (err) {
+      console.error("Failed to remove submission:", err);
+    }
+  }
+
   useEffect(() => { loadData(); }, [loadData]);
 
   if (loading) {
@@ -279,6 +295,13 @@ export default function ProfilePage() {
             isSkald={false}
           />
         </div>
+
+        {player.catchUpXpMultiplier > 1 && (
+          <div className="mb-4 bg-gold/10 border border-gold/30 rounded-lg px-3 py-2 text-center text-xs font-[family-name:var(--font-cinzel)]">
+            <span className="text-gold font-bold">{player.catchUpXpMultiplier}x XP</span>
+            <span className="text-muted ml-1">— Late-join boost active</span>
+          </div>
+        )}
 
         {/* Stats grid */}
         <div className="grid grid-cols-3 gap-3 mb-6">
@@ -669,8 +692,18 @@ export default function ProfilePage() {
                           </>
                         )}
                       </div>
-                      <div className="text-[10px] text-muted mt-1 opacity-60">
-                        Cumulative: {Math.round(s.xpTotalAfter)} XP — {s.titleAfter}
+                      <div className="flex items-center justify-between mt-1">
+                        <div className="text-[10px] text-muted opacity-60">
+                          Cumulative: {Math.round(s.xpTotalAfter)} XP — {s.titleAfter}
+                        </div>
+                        {isAdmin && sub && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeSubmission(sub.id, s.weekNumber); }}
+                            className="text-[10px] text-red-400/60 hover:text-red-400 transition-colors"
+                          >
+                            Remove
+                          </button>
+                        )}
                       </div>
                       {shieldMessagesByWeek[s.weekId]?.length > 0 && (
                         <div className="mt-2 pt-2 border-t border-card-border/50 text-[10px] text-muted space-y-1">

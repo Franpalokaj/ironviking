@@ -364,29 +364,54 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
     shieldMap[p.id] = Math.round(preShieldRaw * SHIELD_BONUS_PCT * received * 10) / 10;
   }
 
-  // STEP 11: Berserker check
+  // STEP 11: Berserker check — based on total weekly XP rank
   const berserkerMap: Record<number, number> = {};
   for (const p of allPlayers) {
     berserkerMap[p.id] = 1.0;
+  }
 
-    if (week.weekNumber < 3) continue;
-
-    const prevScores = await db
-      .select()
+  if (week.weekNumber >= 3) {
+    const prevAllScores = await db
+      .select({
+        playerId: weeklyScores.playerId,
+        totalFinal: weeklyScores.totalFinal,
+        weekNumber: weeks.weekNumber,
+      })
       .from(weeklyScores)
       .innerJoin(weeks, eq(weeklyScores.weekId, weeks.id))
-      .where(
-        and(
-          eq(weeklyScores.playerId, p.id),
-          sql`${weeks.weekNumber} >= ${week.weekNumber - 2}`,
-          sql`${weeks.weekNumber} < ${week.weekNumber}`
-        )
-      )
-      .orderBy(desc(weeks.weekNumber))
-      .limit(2);
+      .where(and(
+        sql`${weeks.weekNumber} >= ${week.weekNumber - 2}`,
+        sql`${weeks.weekNumber} < ${week.weekNumber}`
+      ));
 
-    if (prevScores.length === 2 && prevScores.every((s) => s.weekly_scores.realmRankWeek >= 6)) {
-      berserkerMap[p.id] = BERSERKER_MULTIPLIER;
+    const scoresByWeek: Record<number, { playerId: number; totalFinal: number }[]> = {};
+    for (const s of prevAllScores) {
+      if (!scoresByWeek[s.weekNumber]) scoresByWeek[s.weekNumber] = [];
+      scoresByWeek[s.weekNumber].push({ playerId: s.playerId, totalFinal: s.totalFinal });
+    }
+
+    const prevWeekNums = Object.keys(scoresByWeek).map(Number);
+
+    if (prevWeekNums.length === 2) {
+      const xpRank: Record<number, Record<number, number>> = {};
+      for (const wn of prevWeekNums) {
+        const sorted = [...scoresByWeek[wn]].sort((a, b) => b.totalFinal - a.totalFinal);
+        xpRank[wn] = {};
+        for (let i = 0; i < sorted.length; i++) {
+          let rank = i + 1;
+          for (let j = i - 1; j >= 0; j--) {
+            if (sorted[j].totalFinal === sorted[i].totalFinal) rank = j + 1;
+            else break;
+          }
+          xpRank[wn][sorted[i].playerId] = rank;
+        }
+      }
+
+      for (const p of allPlayers) {
+        if (prevWeekNums.every(wn => (xpRank[wn][p.id] ?? 0) >= 6)) {
+          berserkerMap[p.id] = BERSERKER_MULTIPLIER;
+        }
+      }
     }
   }
 
