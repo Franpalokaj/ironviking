@@ -215,7 +215,7 @@ export default function StatsPage() {
           Cumulative {activity.label} ({activity.unit})
         </p>
         {chartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%" minHeight={320} className="!h-[min(70vh,600px)] sm:!h-[min(75vh,800px)]">
+          <ResponsiveContainer width="100%" height="100%" minHeight={320} className="!h-[min(55vh,450px)] sm:!h-[min(60vh,550px)]">
             <LineChart data={chartData}>
               <XAxis
                 dataKey="week"
