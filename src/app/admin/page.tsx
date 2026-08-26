@@ -1363,8 +1363,8 @@ export default function AdminPage() {
                 <p className="text-[10px] text-muted mb-3">
                   For Vikings who missed the deadline or forgot to submit. After saving, open{" "}
                   <strong className="text-foreground">Weeks</strong> and click <strong className="text-foreground">Rescore</strong> on{" "}
-                  <strong>this week</strong>. If later weeks were already scored, rescore those too in order (week numbers
-                  ascending) so everyone&apos;s cumulative XP/titles stay correct.
+                  <strong>this week</strong> — later scored weeks are rescored automatically so everyone&apos;s
+                  cumulative XP/titles stay correct.
                 </p>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="col-span-2">

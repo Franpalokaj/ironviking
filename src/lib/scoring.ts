@@ -584,6 +584,60 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
   }
 }
 
+/**
+ * Score a week, then rescore every later locked week in ascending order.
+ * Each week's xpTotalAfter bakes in the cumulative XP of all earlier weeks, so
+ * changing a past week (removed/retroactive submission, override) leaves later
+ * weeks — and the leaderboard, which reads max(xpTotalAfter) — stale unless
+ * they are rescored too.
+ */
+export async function scoreWeekWithCascade(
+  weekId: number,
+  force = false,
+  groupChallengeOverride?: boolean | null
+): Promise<{ success: boolean; message: string; detail?: string }> {
+  const result = await scoreWeek(weekId, force, groupChallengeOverride);
+  if (!result.success) return result;
+
+  const [week] = await db.select().from(weeks).where(eq(weeks.id, weekId)).limit(1);
+  if (!week) return result;
+
+  const laterWeeks = await db
+    .select()
+    .from(weeks)
+    .where(and(sql`${weeks.weekNumber} > ${week.weekNumber}`, eq(weeks.isLocked, true)))
+    .orderBy(weeks.weekNumber);
+
+  const cascaded: number[] = [];
+  for (const w of laterWeeks) {
+    // Preserve the recorded group-challenge outcome (it may have been forced via
+    // an override that isn't stored anywhere) instead of re-deriving it
+    let override: boolean | null = null;
+    if (w.type === "collaboration" && w.secondChallengeId) {
+      const prior = await db
+        .select({ pts: weeklyScores.secondChallengePoints })
+        .from(weeklyScores)
+        .where(eq(weeklyScores.weekId, w.id));
+      if (prior.length > 0) override = prior.some((r) => r.pts > 0);
+    }
+
+    const r = await scoreWeek(w.id, true, override);
+    if (!r.success) {
+      return {
+        ...result,
+        detail: `${result.detail ?? ""} Cascade stopped at week ${w.weekNumber}: ${r.message}`.trim(),
+      };
+    }
+    cascaded.push(w.weekNumber);
+  }
+
+  if (cascaded.length > 0) {
+    const det = `Also rescored week${cascaded.length > 1 ? "s" : ""} ${cascaded.join(", ")} so cumulative XP stays correct.`;
+    return { ...result, detail: result.detail ? `${result.detail} ${det}` : det };
+  }
+  return result;
+}
+
 async function detectMilestones(
   weekId: number,
   weekNumber: number,

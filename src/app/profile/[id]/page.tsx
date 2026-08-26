@@ -378,12 +378,20 @@ export default function ProfilePage() {
                       {new Date(w.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                     </div>
                   </div>
-                  <button
-                    onClick={() => router.push(`/submit?week=${w.weekNumber}`)}
-                    className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-fire border border-fire/40 rounded-lg px-3 py-1.5 hover:bg-fire/10 transition-colors"
-                  >
-                    Submit
-                  </button>
+                  {isOwnProfile ? (
+                    <button
+                      onClick={() => router.push(`/submit?week=${w.weekNumber}`)}
+                      className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-fire border border-fire/40 rounded-lg px-3 py-1.5 hover:bg-fire/10 transition-colors"
+                    >
+                      Submit
+                    </button>
+                  ) : (
+                    // The submit page always submits as the logged-in player, so an
+                    // admin can't fill it in on someone else's behalf from here
+                    <span className="text-[10px] text-muted text-right">
+                      Add via Admin → Submissions
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

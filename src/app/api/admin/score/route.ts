@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { scoreWeek } from "@/lib/scoring";
+import { scoreWeekWithCascade } from "@/lib/scoring";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     const override = groupChallengeOverride === true ? true : groupChallengeOverride === false ? false : null;
-    const result = await scoreWeek(weekId, !!force, override);
+    const result = await scoreWeekWithCascade(weekId, !!force, override);
     return NextResponse.json(
       { ...result, message: result.detail ? `${result.message} ${result.detail}` : result.message },
       { status: result.success ? 200 : 400 }
