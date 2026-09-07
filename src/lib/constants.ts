@@ -105,7 +105,7 @@ export const CONSOLIDATION_WEEKS = [6, 11, 15, 19] as const;
 export const BACKOFF_WEEK = 22;
 export const PRE_HOLD_BONUS = 1.5;  // +50% XP the week before a hold/backoff week
 export const HOLD_PENALTY = 0.75;   // -25% XP during hold/backoff weeks
-export const DOUBLE_XP_WEEKS = [27] as const;
+export const DOUBLE_XP_WEEKS = [28] as const;
 export const DOUBLE_XP_MULTIPLIER = 2.0; // all XP (except first-submission bonus) doubled for everyone
 
 // Activity km multipliers (relative to 1 km of running)
