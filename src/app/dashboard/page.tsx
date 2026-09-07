@@ -10,7 +10,7 @@ import WeeklyReveal from "@/components/WeeklyReveal";
 import LeaderboardReveal from "@/components/LeaderboardReveal";
 import BottomNav from "@/components/BottomNav";
 import Image from "next/image";
-import { SIGIL_IMAGES, TITLE_IMAGES, REALM_IMAGES, getPhaseForWeek, WEEKLY_KM_TARGETS, CONSOLIDATION_WEEKS, BACKOFF_WEEK, BUDDY_TEAM_NAMES } from "@/lib/constants";
+import { SIGIL_IMAGES, TITLE_IMAGES, REALM_IMAGES, getPhaseForWeek, WEEKLY_KM_TARGETS, CONSOLIDATION_WEEKS, BACKOFF_WEEK, DOUBLE_XP_WEEKS, BUDDY_TEAM_NAMES } from "@/lib/constants";
 
 interface RevealPlayer {
   playerId: number;
@@ -544,6 +544,18 @@ export default function DashboardPage() {
                 const wn = week.weekNumber;
                 const isHold = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn) || wn === BACKOFF_WEEK;
                 const isPreHold = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn + 1) || wn + 1 === BACKOFF_WEEK;
+                const isDoubleXp = (DOUBLE_XP_WEEKS as readonly number[]).includes(wn);
+                if (isDoubleXp) {
+                  return (
+                    <div className="flex w-full max-w-md items-center gap-2 bg-fire/10 border border-fire/30 rounded-lg px-4 py-2 animate-[fadeIn_0.6s_ease-out]">
+                      <span className="text-sm shrink-0 text-fire font-bold">*</span>
+                      <div className="text-left min-w-0">
+                        <div className="text-xs font-[family-name:var(--font-cinzel)] font-bold text-fire">Double XP Week</div>
+                        <div className="text-[10px] text-muted">All XP earned this week is doubled — every km, every session, every deed.</div>
+                      </div>
+                    </div>
+                  );
+                }
                 if (isHold) {
                   return (
                     <div className="flex w-full max-w-md items-center gap-2 bg-ice/10 border border-ice/30 rounded-lg px-4 py-2 animate-[fadeIn_0.6s_ease-out]">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getTitleForXP, TITLE_STYLES, CONSOLIDATION_WEEKS, BACKOFF_WEEK } from "@/lib/constants";
+import { getTitleForXP, TITLE_STYLES, CONSOLIDATION_WEEKS, BACKOFF_WEEK, DOUBLE_XP_WEEKS, DOUBLE_XP_MULTIPLIER } from "@/lib/constants";
 
 function makeAudio(src: string, volume: number): HTMLAudioElement | null {
   if (typeof window === "undefined") return null;
@@ -159,9 +159,10 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, shieldMessages 
   const berserker = score.berserkerMultiplier > 1;
 
   const wn = score.weekNumber;
-  const isHoldWeek = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn) || wn === BACKOFF_WEEK;
-  const isPreHoldWeek = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn + 1) || wn + 1 === BACKOFF_WEEK;
-  const weekMultiplier = isHoldWeek ? 0.75 : isPreHoldWeek ? 1.5 : 1.0;
+  const isDoubleXpWeek = (DOUBLE_XP_WEEKS as readonly number[]).includes(wn);
+  const isHoldWeek = !isDoubleXpWeek && ((CONSOLIDATION_WEEKS as readonly number[]).includes(wn) || wn === BACKOFF_WEEK);
+  const isPreHoldWeek = !isDoubleXpWeek && ((CONSOLIDATION_WEEKS as readonly number[]).includes(wn + 1) || wn + 1 === BACKOFF_WEEK);
+  const weekMultiplier = isDoubleXpWeek ? DOUBLE_XP_MULTIPLIER : isHoldWeek ? 0.75 : isPreHoldWeek ? 1.5 : 1.0;
 
   return (
     <div className="fixed inset-0 z-50 bg-background/98 flex items-center justify-center px-4">
@@ -216,15 +217,15 @@ export default function WeeklyReveal({ score, prevXp, prevTitle, shieldMessages 
               )}
               {weekMultiplier !== 1.0 && visibleLines >= activeLineCount && (
                 <div className={`flex items-center justify-between px-4 py-2 animate-[fadeIn_0.4s_ease-out] ${
-                  isPreHoldWeek ? "bg-gold/10" : "bg-ice/10"
+                  isDoubleXpWeek ? "bg-fire/10" : isPreHoldWeek ? "bg-gold/10" : "bg-ice/10"
                 }`}>
                   <div className="flex items-center gap-2 text-sm">
-                    <span>{isPreHoldWeek ? "⚡" : "❄️"}</span>
-                    <span className={`font-bold ${isPreHoldWeek ? "text-gold" : "text-ice"}`}>
-                      {isPreHoldWeek ? "Last Push" : "Consolidation"}
+                    <span>{isDoubleXpWeek ? "🔥" : isPreHoldWeek ? "⚡" : "❄️"}</span>
+                    <span className={`font-bold ${isDoubleXpWeek ? "text-fire" : isPreHoldWeek ? "text-gold" : "text-ice"}`}>
+                      {isDoubleXpWeek ? "Double XP" : isPreHoldWeek ? "Last Push" : "Consolidation"}
                     </span>
                   </div>
-                  <span className={`font-bold ${isPreHoldWeek ? "text-gold" : "text-ice"}`}>
+                  <span className={`font-bold ${isDoubleXpWeek ? "text-fire" : isPreHoldWeek ? "text-gold" : "text-ice"}`}>
                     ×{weekMultiplier}
                   </span>
                 </div>

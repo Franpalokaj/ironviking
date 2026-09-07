@@ -34,6 +34,8 @@ import {
   BACKOFF_WEEK,
   PRE_HOLD_BONUS,
   HOLD_PENALTY,
+  DOUBLE_XP_WEEKS,
+  DOUBLE_XP_MULTIPLIER,
   FIRST_SUBMISSION_BONUS,
   type Difficulty,
   getTitleForXP,
@@ -494,7 +496,10 @@ export async function scoreWeek(weekId: number, force = false, groupChallengeOve
     const wn = week.weekNumber;
     const isHoldWeek = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn) || wn === BACKOFF_WEEK;
     const isPreHoldWeek = (CONSOLIDATION_WEEKS as readonly number[]).includes(wn + 1) || wn + 1 === BACKOFF_WEEK;
-    if (isHoldWeek) {
+    const isDoubleXpWeek = (DOUBLE_XP_WEEKS as readonly number[]).includes(wn);
+    if (isDoubleXpWeek) {
+      weekMultiplier = DOUBLE_XP_MULTIPLIER;
+    } else if (isHoldWeek) {
       weekMultiplier = HOLD_PENALTY;
     } else if (isPreHoldWeek) {
       weekMultiplier = PRE_HOLD_BONUS;
